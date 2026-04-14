@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>POLY — Step Sequencer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:   #080808;
+      --bg1:  #101010;
+      --bg2:  #181818;
+      --bg3:  #222222;
+      --bd:   #252525;
+      --bd2:  #363636;
+      --tx:   #999;
+      --tx2:  #ccc;
+      --tx3:  #555;
+      --acc:  #ff6b35;
+    }
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--bg); color: var(--tx2);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px; letter-spacing: 0.3px;
+      -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    .app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+
+    /* ── HEADER ── */
+    .hdr {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 6px 12px; background: var(--bg1);
+      border-bottom: 1px solid var(--bd); flex-shrink: 0;
+    }
+    .logo { font-size: 16px; font-weight: 900; letter-spacing: 4px; color: #fff; }
+    .sep  { width: 1px; height: 18px; background: var(--bd2); margin: 0 2px; }
+    .cg   { display: flex; align-items: center; gap: 5px; }
+    .lbl  { color: var(--tx3); font-size: 9px; letter-spacing: 1.5px; }
+    button.mbtn {
+      padding: 3px 9px; border: 1px solid var(--bd2); background: transparent;
+      color: var(--tx); font-family: inherit; font-size: 10px; letter-spacing: 1px;
+      cursor: pointer; border-radius: 2px; transition: all .12s;
+    }
+    button.mbtn:hover:not(.on) { border-color: var(--tx); color: var(--tx2); }
+    button.mbtn.on { background: var(--acc); border-color: var(--acc); color: #000; font-weight: bold; }
+    button.play {
+      padding: 4px 18px; border: 1px solid var(--bd2); background: transparent;
+      color: var(--tx); font-size: 17px; cursor: pointer; border-radius: 3px;
+      font-family: inherit; line-height: 1; transition: all .12s;
+    }
+    button.play:hover:not(.live) { border-color: #00e676; color: #00e676; }
+    button.play.live {
+      border-color: #00e676; color: #000; background: #00e676;
+      box-shadow: 0 0 12px rgba(0,230,118,.45);
+    }
+    select {
+      background: var(--bg2); color: var(--tx2); border: 1px solid var(--bd2);
+      font-family: inherit; font-size: 11px; padding: 2px 5px;
+      border-radius: 2px; cursor: pointer; max-width: 160px;
+    }
+    select:focus { outline: none; border-color: var(--acc); }
+    input.bpm {
+      width: 50px; background: var(--bg2); border: 1px solid var(--bd2);
+      color: var(--tx2); font-family: inherit; font-size: 14px; font-weight: bold;
+      text-align: center; padding: 1px 3px; border-radius: 2px;
+    }
+    input.bpm:focus { outline: none; border-color: var(--acc); }
+    .midi-pill {
+      font-size: 9px; letter-spacing: 1px; padding: 2px 7px;
+      border-radius: 10px; border: 1px solid; white-space: nowrap;
+    }
+    .midi-pill.ok { border-color: #00e676; color: #00e676; }
+    .midi-pill.no { border-color: var(--tx3); color: var(--tx3); }
+
+    /* ── MAIN LAYOUT ── */
+    .main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+    /* ── TRACK PANEL ── */
+    .tpanel {
+      display: flex; flex-direction: column; width: 64px; flex-shrink: 0;
+      background: var(--bg1); border-right: 1px solid var(--bd);
+      padding: 5px 3px; gap: 3px;
+    }
+    .tbtn {
+      display: flex; flex-direction: column; align-items: center;
+      flex: 1; padding: 4px 2px; border: 1px solid var(--bd);
+      border-radius: 3px; cursor: pointer; background: var(--bg2); gap: 2px;
+      transition: border-color .15s, box-shadow .15s;
+      -webkit-touch-callout: none;
+    }
+    .tbtn.sel {
+      border-color: var(--tc);
+      box-shadow: 0 0 8px rgba(var(--tc-rgb), .28);
+    }
+    .tdot { width: 7px; height: 7px; border-radius: 50%; background: var(--tc); }
+    .tname { font-size: 9px; color: var(--tx); letter-spacing: 1px; }
+    .tch   { font-size: 8px; color: var(--tx3); cursor: pointer; padding: 1px 3px; border-radius: 2px; }
+    .tch:hover { background: var(--bg3); color: var(--tx); }
+    .tmute {
+      font-size: 8px; padding: 1px 4px; border: 1px solid var(--bd);
+      background: transparent; color: var(--tx3); cursor: pointer;
+      border-radius: 2px; font-family: inherit; letter-spacing: 1px;
+      -webkit-touch-callout: none;
+    }
+    .tmute.muted { border-color: #f55; color: #f55; }
+
+    /* ── SEQUENCER AREA ── */
+    .sarea {
+      display: flex; flex-direction: column; flex: 1;
+      overflow: hidden; padding: 6px 8px 4px; gap: 5px; min-width: 0;
+    }
+
+    /* Pattern row */
+    .prow { display: flex; align-items: center; gap: 3px; flex-shrink: 0; flex-wrap: nowrap; }
+    .pbtn {
+      width: 24px; height: 22px; border: 1px solid var(--bd); background: var(--bg2);
+      color: var(--tx3); font-family: inherit; font-size: 9px; cursor: pointer;
+      border-radius: 2px; transition: all .1s; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .pbtn:hover { border-color: var(--bd2); color: var(--tx); }
+    .pbtn.cur { border-color: var(--tc); color: var(--tc); background: var(--bg3); }
+    .pbtn.has { background: var(--bg3); color: var(--tx); }
+
+    /* ── GRID ── */
+    .gwrap {
+      display: flex; flex: 1; overflow: hidden; min-height: 0;
+      background: var(--bg1); border: 1px solid var(--bd); border-radius: 3px;
+      position: relative;
+      touch-action: none;
+      -webkit-touch-callout: none;
+    }
+    /* Note labels */
+    .ncol {
+      width: 38px; flex-shrink: 0; border-right: 1px solid var(--bd);
+      display: flex; flex-direction: column;
+    }
+    .ncol-sp { height: 20px; flex-shrink: 0; border-bottom: 1px solid var(--bd); }
+    .nlbl {
+      flex: 1; display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 4px; font-size: 9px; color: var(--tx3);
+      border-bottom: 1px solid var(--bd); white-space: nowrap; min-height: 0;
+    }
+    .nlbl:last-child { border-bottom: none; }
+    .nlbl.root { color: var(--acc); font-weight: bold; }
+    /* Grid body */
+    .gbody { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-width: 0; }
+    .snums { display: grid; height: 20px; flex-shrink: 0; border-bottom: 1px solid var(--bd); }
+    .snum { display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--tx3); }
+    .snum.bar { color: var(--acc); }
+    .snum.now { color: #fff; font-weight: bold; }
+    .grows { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .grow  {
+      display: grid; flex: 1; gap: 2px; padding: 2px;
+      border-bottom: 1px solid var(--bd); min-height: 0;
+    }
+    .grow:last-child { border-bottom: none; }
+
+    /* CELLS — touch-friendly */
+    .cell {
+      border-radius: 2px; cursor: pointer; position: relative; overflow: hidden;
+      border: 1px solid transparent; min-height: 0;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      transition: background .05s;
+    }
+    .cell.off { background: var(--bg2); border-color: var(--bd); }
+    .cell.ph  { border-color: rgba(255,255,255,.22) !important; }
+    .cell.off.ph { background: rgba(255,255,255,.03); }
+    .cell.dragging { outline: 2px solid rgba(255,255,255,.45); outline-offset: -1px; }
+    /* velocity bar at bottom */
+    .vbar {
+      position: absolute; bottom: 0; left: 0; height: 3px;
+      border-radius: 0 0 2px 2px; pointer-events: none;
+    }
+    /* velocity text shown during drag */
+    .vcap {
+      position: absolute; inset: 0; display: flex; align-items: center;
+      justify-content: center; font-size: 9px; font-weight: 900;
+      pointer-events: none; z-index: 3; letter-spacing: 0;
+      text-shadow: 0 1px 3px rgba(0,0,0,.8);
+    }
+    /* drag direction hint arrows */
+    .darr {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      font-size: 8px; opacity: .7; pointer-events: none; z-index: 4;
+      line-height: 1;
+    }
+    .darr.up { top: 0; }
+    .darr.dn { bottom: 4px; }
+
+    /* Global velocity readout during drag */
+    .vel-hud {
+      position: absolute; top: 6px; right: 6px; z-index: 20;
+      background: var(--bg1); border: 1px solid; border-radius: 3px;
+      padding: 3px 9px; font-size: 11px; font-weight: bold;
+      letter-spacing: 1px; pointer-events: none;
+    }
+
+    /* Grid controls */
+    .gc { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .scbtn {
+      width: 28px; height: 28px; border: 1px solid var(--bd2); background: var(--bg2);
+      color: var(--tx); font-size: 12px; cursor: pointer; border-radius: 2px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .1s; touch-action: manipulation;
+    }
+    .scbtn:hover:not(:disabled) { background: var(--bg3); color: var(--tx2); }
+    .scbtn:disabled { opacity: .3; cursor: default; }
+    button.xbtn {
+      padding: 4px 8px; border: 1px solid var(--bd2); background: transparent;
+      color: var(--tx); font-family: inherit; font-size: 9px; cursor: pointer;
+      border-radius: 2px; letter-spacing: 1px; transition: all .1s;
+      touch-action: manipulation;
+    }
+    button.xbtn:hover:not(.on) { border-color: var(--tx); color: var(--tx2); }
+    button.xbtn.on { background: var(--tx3); border-color: var(--tx); color: var(--tx2); }
+    button.xbtn.red { border-color: #c44; color: #c44; }
+    button.xbtn.red:hover { background: #c44; color: #000; }
+
+    /* ── SONG MODE ── */
+    .sng-area {
+      display: flex; flex-direction: column; flex: 1;
+      overflow: hidden; padding: 8px; gap: 6px;
+    }
+    .sng-hdr { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .sng-wrap {
+      flex: 1; overflow: hidden; background: var(--bg1);
+      border: 1px solid var(--bd); border-radius: 3px; display: flex; min-height: 0;
+    }
+    .sng-trklabels {
+      width: 50px; flex-shrink: 0; border-right: 1px solid var(--bd);
+      display: flex; flex-direction: column;
+    }
+    .sng-sp { height: 22px; border-bottom: 1px solid var(--bd); flex-shrink: 0; }
+    .sng-tl {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: bold; border-bottom: 1px solid var(--bd);
+    }
+    .sng-tl:last-child { border-bottom: none; }
+    .sng-inner { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .sng-slots {
+      display: grid; grid-template-columns: repeat(16, 1fr);
+      height: 22px; flex-shrink: 0; border-bottom: 1px solid var(--bd);
+    }
+    .sng-sn {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--tx3);
+      border-left: 1px solid var(--bd);
+    }
+    .sng-sn:first-child { border-left: none; }
+    .sng-sn.cur { color: #fff; font-weight: bold; background: rgba(255,255,255,.04); }
+    .sng-row {
+      display: grid; grid-template-columns: repeat(16, 1fr);
+      flex: 1; border-bottom: 1px solid var(--bd);
+    }
+    .sng-row:last-child { border-bottom: none; }
+    .sng-cell {
+      border-left: 1px solid var(--bd); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: bold; transition: background .08s;
+      touch-action: manipulation;
+    }
+    .sng-cell:first-child { border-left: none; }
+    .sng-cell.filled { background: rgba(var(--tc-rgb),.18); color: var(--tc); }
+    .sng-cell.filled:hover { background: rgba(var(--tc-rgb),.32); }
+    .sng-cell:not(.filled):hover { background: rgba(255,255,255,.03); }
+    .sng-cell.slot { outline: 1px solid rgba(255,255,255,.28); outline-offset: -1px; }
+    .sng-tip { font-size: 9px; color: var(--tx3); letter-spacing: .3px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const SCALES = {
+  'Major':          [0,2,4,5,7,9,11],
+  'Natural Minor':  [0,2,3,5,7,8,10],
+  'Harmonic Minor': [0,2,3,5,7,8,11],
+  'Melodic Minor':  [0,2,3,5,7,9,11],
+  'Dorian':         [0,2,3,5,7,9,10],
+  'Phrygian':       [0,1,3,5,7,8,10],
+  'Lydian':         [0,2,4,6,7,9,11],
+  'Mixolydian':     [0,2,4,5,7,9,10],
+  'Locrian':        [0,1,3,5,6,8,10],
+  'Pent. Major':    [0,2,4,7,9],
+  'Pent. Minor':    [0,3,5,7,10],
+  'Blues':          [0,3,5,6,7,10],
+  'Chromatic':      [0,1,2,3,4,5,6,7,8,9,10,11],
+};
+const ROOT_NAMES  = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const TCOLORS = [
+  {hex:'#ff6b35',rgb:'255,107,53'},
+  {hex:'#ffd700',rgb:'255,215,0'},
+  {hex:'#00e676',rgb:'0,230,118'},
+  {hex:'#40c4ff',rgb:'64,196,255'},
+  {hex:'#ff4081',rgb:'255,64,129'},
+  {hex:'#e040fb',rgb:'224,64,251'},
+  {hex:'#b2ff59',rgb:'178,255,89'},
+  {hex:'#ff9100',rgb:'255,145,0'},
+];
+const N_TRK = 8, N_PAT = 16, ROWS = 8, COLS = 16;
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+function buildScale(rootIdx, scaleName) {
+  const ivs = SCALES[scaleName] || SCALES['Major'];
+  const set = new Set();
+  for (let o = -1; o <= 9; o++) {
+    const base = (o + 1) * 12 + rootIdx;
+    for (const iv of ivs) { const m = base + iv; if (m >= 12 && m <= 120) set.add(m); }
+  }
+  return [...set].sort((a,b) => a-b);
+}
+function midiLabel(m) {
+  if (m == null) return '---';
+  return ROOT_NAMES[m % 12] + (Math.floor(m / 12) - 1);
+}
+function mkPat()    { return { steps: {}, len: 16 }; }
+function mkTrack(i) { return { id:i, midiCh:i+1, muted:false, pats:Array.from({length:N_PAT},mkPat), curPat:0, yOff:0, xOff:0 }; }
+function mkState()  {
+  return { bpm:120, playing:false, mode:'seq', selTrk:0, root:0, scale:'Major',
+           tracks:Array.from({length:N_TRK},(_,i)=>mkTrack(i)),
+           song:Array.from({length:N_PAT},()=>Array(N_TRK).fill(null)) };
+}
+function hasNotes(p) { return Object.keys(p.steps).length > 0; }
+
+// Velocity → visual alpha: vel 1 = 15%, vel 127 = 100%
+function velAlpha(v) { return 0.15 + (v / 127) * 0.85; }
+
+// ═══════════════════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════════════════
+function Header({st, set, onPlay, onStop, midiOuts, selOut, setSel, midiOk}) {
+  return (
+    <div className="hdr">
+      <div className="logo">POLY</div>
+      <div className="cg">
+        <button className={`mbtn ${st.mode==='seq'?'on':''}`} onClick={()=>set(s=>({...s,mode:'seq'}))}>SEQ</button>
+        <button className={`mbtn ${st.mode==='song'?'on':''}`} onClick={()=>set(s=>({...s,mode:'song'}))}>SONG</button>
+      </div>
+      <div className="sep"/>
+      <div className="cg">
+        <span className="lbl">BPM</span>
+        <input className="bpm" type="number" min="20" max="300" value={st.bpm}
+          onChange={e=>set(s=>({...s,bpm:Math.max(20,Math.min(300,+e.target.value||120))}))}/>
+      </div>
+      <div className="sep"/>
+      <div className="cg">
+        <span className="lbl">ROOT</span>
+        <select value={st.root} onChange={e=>set(s=>({...s,root:+e.target.value}))}>
+          {ROOT_NAMES.map((n,i)=><option key={i} value={i}>{n}</option>)}
+        </select>
+      </div>
+      <div className="cg">
+        <span className="lbl">SCALE</span>
+        <select value={st.scale} onChange={e=>set(s=>({...s,scale:e.target.value}))}>
+          {Object.keys(SCALES).map(sc=><option key={sc} value={sc}>{sc}</option>)}
+        </select>
+      </div>
+      <div className="sep"/>
+      {midiOk ? (
+        <div className="cg">
+          <span className="lbl">MIDI OUT</span>
+          <select value={selOut} onChange={e=>setSel(e.target.value)}>
+            <option value="">— none —</option>
+            {midiOuts.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <div className="midi-pill ok">● MIDI</div>
+        </div>
+      ) : (
+        <div className="midi-pill no">NO MIDI</div>
+      )}
+      <div className="sep"/>
+      <button className={`play ${st.playing?'live':''}`} onClick={st.playing?onStop:onPlay}>
+        {st.playing ? '■' : '▶'}
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// TRACK PANEL
+// ═══════════════════════════════════════════════════════
+function TrkPanel({tracks, sel, onSel, onMute, onCh}) {
+  return (
+    <div className="tpanel">
+      {tracks.map((t,i) => {
+        const c = TCOLORS[i], isSel = i === sel;
+        return (
+          <div key={i} className={`tbtn ${isSel?'sel':''}`}
+            style={{'--tc':c.hex,'--tc-rgb':c.rgb}}
+            onClick={()=>onSel(i)}>
+            <div className="tdot"/>
+            <div className="tname">TR{i+1}</div>
+            <div className="tch" onClick={e=>{
+              e.stopPropagation();
+              const v=prompt(`MIDI ch for TR${i+1}:`,t.midiCh);
+              if(v!=null){const n=+v;if(n>=1&&n<=16)onCh(i,n);}
+            }}>CH{t.midiCh}</div>
+            <button className={`tmute ${t.muted?'muted':''}`}
+              onClick={e=>{e.stopPropagation();onMute(i);}}>
+              {t.muted?'MUT':'mut'}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// SEQUENCER GRID
+// ═══════════════════════════════════════════════════════
+function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpdate, onScrollY, onScrollX, onPatSel, onPatLen, onClear}) {
+  const c = TCOLORS[trkIdx];
+  // liveDrag: {ni, step, vel} while drag in progress — drives live visual only
+  const [liveDrag, setLiveDrag] = useState(null);
+
+  // dragRef holds all mutable drag state without triggering renders
+  const dragRef  = useRef(null);
+  // hRef keeps callbacks fresh without re-registering window listeners
+  const hRef = useRef({});
+  useEffect(() => { hRef.current = { onToggle, onUpdate, trkIdx }; });
+
+  const sNotes = useMemo(() => buildScale(root, scale), [root, scale]);
+  const pat    = track.pats[track.curPat];
+  const maxY   = Math.max(0, sNotes.length - ROWS);
+  const yOff   = Math.min(track.yOff, maxY);
+  const xStart = track.xOff * COLS;
+
+  // Rows: row 0 (top) = highest note, row 7 (bottom) = lowest
+  const rows = Array.from({length:ROWS}, (_,r) => {
+    const ni   = yOff + (ROWS - 1 - r);
+    const midi = sNotes[ni];
+    return { r, ni, midi, isRoot: midi != null && (midi % 12) === root };
+  });
+  const steps = Array.from({length:COLS}, (_,c) => xStart + c);
+
+  // Playhead column (which visible col is currently playing)
+  const patStep = playing && absStep >= 0 ? absStep % pat.len : -1;
+  const playCol = patStep >= 0 ? patStep - xStart : -1; // -1 = off-screen
+
+  // ── GLOBAL drag/move/end listeners (registered once) ──
+  useEffect(() => {
+    function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+    function onMove(e) {
+      const ds = dragRef.current;
+      if (!ds) return;
+      const dy = ds.startY - getY(e);   // positive = moved UP = more velocity
+      if (Math.abs(dy) > 8) {
+        ds.dragging = true;
+        if (ds.wasActive) {
+          const v = Math.min(127, Math.max(1, Math.round(ds.startVel + dy)));
+          ds.liveVel = v;
+          setLiveDrag({ ni: ds.ni, step: ds.step, vel: v });
+        }
+        // Prevent iOS scroll while dragging a note
+        if (e.cancelable) e.preventDefault();
+      }
+    }
+
+    function onEnd() {
+      const ds = dragRef.current;
+      if (!ds) return;
+      const { onToggle, onUpdate, trkIdx } = hRef.current;
+      if (!ds.dragging) {
+        // Clean tap → toggle the cell
+        onToggle(trkIdx, ds.ni, ds.step);
+      } else if (ds.wasActive && ds.liveVel !== null) {
+        // Commit dragged velocity
+        onUpdate(trkIdx, ds.ni, ds.step, { vel: ds.liveVel });
+      }
+      dragRef.current = null;
+      setLiveDrag(null);
+    }
+
+    window.addEventListener('mousemove',  onMove);
+    window.addEventListener('mouseup',    onEnd);
+    window.addEventListener('touchmove',  onMove, { passive: false });
+    window.addEventListener('touchend',   onEnd);
+    window.addEventListener('touchcancel',onEnd);
+    return () => {
+      window.removeEventListener('mousemove',  onMove);
+      window.removeEventListener('mouseup',    onEnd);
+      window.removeEventListener('touchmove',  onMove);
+      window.removeEventListener('touchend',   onEnd);
+      window.removeEventListener('touchcancel',onEnd);
+    };
+  }, []); // intentionally empty — reads via hRef
+
+  function startPress(ni, step, clientY, e) {
+    e.preventDefault();
+    const k  = `${ni}_${step}`;
+    const sd = pat.steps[k];
+    dragRef.current = {
+      ni, step, k,
+      startY:   clientY,
+      startVel: sd ? sd.vel : 100,
+      liveVel:  sd ? sd.vel : null,
+      wasActive: !!sd,
+      dragging:  false,
+    };
+  }
+
+  const gridCols = { gridTemplateColumns: `repeat(${COLS},1fr)` };
+
+  return (
+    <div className="sarea">
+      {/* Pattern selector */}
+      <div className="prow">
+        <span className="lbl" style={{color:c.hex,marginRight:3}}>PAT</span>
+        {track.pats.map((p,i) => (
+          <button key={i}
+            className={`pbtn ${i===track.curPat?'cur':''} ${hasNotes(p)&&i!==track.curPat?'has':''}`}
+            style={i===track.curPat?{'--tc':c.hex,borderColor:c.hex,color:c.hex}:{}}
+            onClick={()=>onPatSel(trkIdx,i)}>{i+1}</button>
+        ))}
+        <div style={{flex:1}}/>
+        <button className="xbtn red" onClick={()=>{if(confirm('Clear this pattern?'))onClear(trkIdx);}}>CLEAR</button>
+      </div>
+
+      {/* Grid */}
+      <div className="gwrap" onContextMenu={e=>e.preventDefault()}>
+        {/* Note labels */}
+        <div className="ncol">
+          <div className="ncol-sp"/>
+          {rows.map(({r,ni,midi,isRoot}) => (
+            <div key={r} className={`nlbl ${isRoot?'root':''}`} style={isRoot?{color:c.hex}:{}}>
+              {midiLabel(midi)}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid body */}
+        <div className="gbody">
+          {/* Step numbers */}
+          <div className="snums" style={gridCols}>
+            {steps.map((s,col) => (
+              <div key={s} className={`snum ${s%4===0?'bar':''} ${col===playCol?'now':''}`}>
+                {col%4===0 ? s+1 : '·'}
+              </div>
+            ))}
+          </div>
+
+          {/* Cell rows */}
+          <div className="grows">
+            {rows.map(({r,ni}) => (
+              <div key={r} className="grow" style={gridCols}>
+                {steps.map((step, col) => {
+                  const k  = `${ni}_${step}`;
+                  const sd = pat.steps[k];
+                  const isOn  = !!sd;
+                  const isPh  = col === playCol;
+                  // live vel overrides committed vel during drag
+                  const isDrag = liveDrag?.ni===ni && liveDrag?.step===step;
+                  const dispVel = isDrag ? liveDrag.vel : (isOn ? sd.vel : null);
+                  const alpha = dispVel != null ? velAlpha(dispVel) : 0;
+
+                  return (
+                    <div key={step}
+                      className={`cell ${isOn||isDrag?'on':'off'} ${isPh?'ph':''} ${isDrag?'dragging':''}`}
+                      style={(isOn||isDrag) ? {
+                        background: `rgba(${c.rgb},${alpha})`,
+                        boxShadow: `0 0 ${4+alpha*6}px rgba(${c.rgb},${alpha*.6})`,
+                      } : {}}
+                      onMouseDown={e => startPress(ni, step, e.clientY, e)}
+                      onTouchStart={e => startPress(ni, step, e.touches[0].clientY, e)}
+                    >
+                      {/* Velocity bar at bottom of active cells */}
+                      {(isOn||isDrag) && dispVel!=null && (
+                        <div className="vbar"
+                          style={{width:`${dispVel/127*100}%`, background:c.hex, opacity:.8}}/>
+                      )}
+                      {/* Velocity number shown during drag */}
+                      {isDrag && (
+                        <div className="vcap" style={{color:alpha>0.55?'rgba(0,0,0,.8)':'rgba(255,255,255,.9)'}}>
+                          {liveDrag.vel}
+                        </div>
+                      )}
+                      {/* Drag hint arrows on active cells (only when not dragging) */}
+                      {isOn && !isDrag && !liveDrag && (
+                        <>
+                          <div className="darr up" style={{color:`rgba(${c.rgb},.4)`}}>▲</div>
+                          <div className="darr dn" style={{color:`rgba(${c.rgb},.4)`}}>▼</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* HUD: live velocity readout */}
+        {liveDrag && (
+          <div className="vel-hud" style={{borderColor:c.hex,color:c.hex}}>
+            VEL {liveDrag.vel}
+          </div>
+        )}
+      </div>
+
+      {/* Controls row */}
+      <div className="gc">
+        <div className="cg">
+          <span className="lbl">NOTES</span>
+          <button className="scbtn" onClick={()=>onScrollY(trkIdx,1)}
+            disabled={yOff>=maxY} title="Higher notes">▲</button>
+          <button className="scbtn" onClick={()=>onScrollY(trkIdx,-1)}
+            disabled={yOff<=0} title="Lower notes">▼</button>
+          <span className="lbl" style={{fontSize:9}}>
+            {sNotes[yOff]!=null?midiLabel(sNotes[yOff]):'—'}–{sNotes[Math.min(yOff+7,sNotes.length-1)]!=null?midiLabel(sNotes[Math.min(yOff+7,sNotes.length-1)]):'—'}
+          </span>
+        </div>
+        <div className="sep"/>
+        <div className="cg">
+          <span className="lbl">PAGE</span>
+          <button className="scbtn" onClick={()=>onScrollX(trkIdx,-1)} disabled={track.xOff<=0}>◄</button>
+          <span className="lbl">{track.xOff+1}/8</span>
+          <button className="scbtn" onClick={()=>onScrollX(trkIdx,1)} disabled={track.xOff>=7}>►</button>
+        </div>
+        <div className="sep"/>
+        <div className="cg">
+          <span className="lbl">LEN</span>
+          {[16,32,64,128].map(l=>(
+            <button key={l} className={`xbtn ${pat.len===l?'on':''}`}
+              onClick={()=>onPatLen(trkIdx,l)}>{l}</button>
+          ))}
+        </div>
+        <div className="sep"/>
+        <span className="lbl" style={{color:'var(--tx3)'}}>
+          tap = toggle · hold + drag ▲▼ = velocity
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// SONG VIEW
+// ═══════════════════════════════════════════════════════
+function SongView({st, set, curSlot}) {
+  function click(slot, ti) {
+    set(s => ({
+      ...s,
+      song: s.song.map((row,si) => si!==slot ? row :
+        row.map((v,i) => i!==ti ? v : (v!==null ? null : s.tracks[ti].curPat))
+      ),
+    }));
+  }
+  return (
+    <div className="sng-area">
+      <div className="sng-hdr">
+        <span style={{fontSize:11,fontWeight:'bold',color:'var(--tx2)',letterSpacing:2}}>SONG</span>
+        <span className="lbl">Tap a cell to assign the track's current pattern · tap again to clear</span>
+      </div>
+      <div className="sng-wrap">
+        {/* Track labels */}
+        <div className="sng-trklabels">
+          <div className="sng-sp"/>
+          {st.tracks.map((_,i) => (
+            <div key={i} className="sng-tl" style={{color:TCOLORS[i].hex}}>TR{i+1}</div>
+          ))}
+        </div>
+        {/* Grid */}
+        <div className="sng-inner">
+          <div className="sng-slots">
+            {Array.from({length:16},(_,i) => (
+              <div key={i} className={`sng-sn ${i===curSlot&&st.playing?'cur':''}`}>{i+1}</div>
+            ))}
+          </div>
+          {st.tracks.map((_,ti) => {
+            const c = TCOLORS[ti];
+            return (
+              <div key={ti} className="sng-row">
+                {st.song.map((row,slot) => {
+                  const v = row[ti], filled = v!==null;
+                  return (
+                    <div key={slot}
+                      className={`sng-cell ${filled?'filled':''} ${slot===curSlot&&st.playing?'slot':''}`}
+                      style={filled?{'--tc':c.hex,'--tc-rgb':c.rgb}:{}}
+                      onClick={()=>click(slot,ti)}>
+                      {filled ? v+1 : ''}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="sng-tip">
+        16 slots (columns) × 8 tracks (rows). Number = pattern assigned. Use SEQ mode to build patterns, then arrange them here.
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════
+function App() {
+  const [st, set]       = useState(mkState);
+  const [absStep, setAbsStep]   = useState(-1);
+  const [curSlot, setCurSlot]   = useState(-1);
+  const [midiOuts, setMidiOuts] = useState([]);
+  const [selOut,  setSelOut]    = useState('');
+  const [midiOk,  setMidiOk]    = useState(false);
+
+  const audioRef  = useRef(null);
+  const midiRef   = useRef(null);
+  const outRef    = useRef(null);
+  const timerRef  = useRef(null);
+  const stepRef   = useRef(0);
+  const timeRef   = useRef(0);
+  const playRef   = useRef(false);
+  const stRef     = useRef(st);
+  const sNotesRef = useRef([]);
+
+  useEffect(() => {
+    stRef.current     = st;
+    sNotesRef.current = buildScale(st.root, st.scale);
+  }, [st]);
+  useEffect(() => {
+    if (midiRef.current) outRef.current = midiRef.current.outputs.get(selOut) || null;
+  }, [selOut]);
+
+  // Init MIDI
+  useEffect(() => {
+    if (!navigator.requestMIDIAccess) return;
+    navigator.requestMIDIAccess({ sysex: false }).then(acc => {
+      midiRef.current = acc;
+      const outs = Array.from(acc.outputs.values());
+      setMidiOuts(outs); setMidiOk(true);
+      if (outs.length) { setSelOut(outs[0].id); outRef.current = outs[0]; }
+      acc.onstatechange = () => setMidiOuts(Array.from(acc.outputs.values()));
+    }).catch(() => {});
+  }, []);
+
+  // ── SCHEDULER ──
+  function scheduleStep(absS, audioTime) {
+    const s   = stRef.current, out = outRef.current;
+    if (!out) return;
+    const now = window.performance.now();
+    const ctx = audioRef.current;
+    const tMs = now + Math.max(0, (audioTime - ctx.currentTime) * 1000);
+    const sDur = (60 / s.bpm / 4) * 1000;
+    const notes = sNotesRef.current;
+
+    s.tracks.forEach((trk, ti) => {
+      if (trk.muted) return;
+      let pi = trk.curPat;
+      if (s.mode === 'song') {
+        const sl = Math.floor(absS / 16) % N_PAT;
+        const v  = s.song[sl]?.[ti];
+        if (v === null || v === undefined) return;
+        pi = v;
+      }
+      const pat = trk.pats[pi];
+      const ps  = absS % pat.len;
+      const ch  = (trk.midiCh - 1) & 0x0F;
+      notes.forEach((midi, ni) => {
+        const sd = pat.steps[`${ni}_${ps}`];
+        if (!sd) return;
+        const vel = Math.min(127, Math.max(1, Math.round(sd.vel)));
+        const dur = sDur * (sd.len || 0.5) * 2;
+        out.send([0x90|ch, midi, vel], tMs);
+        out.send([0x80|ch, midi, 0],   tMs + dur);
+      });
+    });
+  }
+
+  const runScheduler = useCallback(() => {
+    const ctx = audioRef.current;
+    if (!ctx || !playRef.current) return;
+    const s = stRef.current, ahead = 0.1;
+    const sDur = 60 / s.bpm / 4;
+    while (timeRef.current < ctx.currentTime + ahead) {
+      const abs = stepRef.current;
+      scheduleStep(abs, timeRef.current);
+      const delay = Math.max(0, (timeRef.current - ctx.currentTime) * 1000);
+      const snap  = abs;
+      setTimeout(() => {
+        if (!playRef.current) return;
+        setAbsStep(snap);
+        if (stRef.current.mode === 'song') setCurSlot(Math.floor(snap/16) % N_PAT);
+      }, delay);
+      timeRef.current += sDur;
+      stepRef.current++;
+    }
+    timerRef.current = setTimeout(runScheduler, 25);
+  }, []);
+
+  function startPlay() {
+    if (!audioRef.current) audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+    playRef.current = true;
+    stepRef.current = 0;
+    timeRef.current = ctx.currentTime + 0.05;
+    runScheduler();
+    set(s => ({ ...s, playing: true }));
+  }
+
+  function stopPlay() {
+    playRef.current = false;
+    clearTimeout(timerRef.current);
+    setAbsStep(-1); setCurSlot(-1);
+    set(s => ({ ...s, playing: false }));
+    if (outRef.current) {
+      stRef.current.tracks.forEach(t => {
+        const ch = (t.midiCh - 1) & 0x0F;
+        outRef.current.send([0xB0|ch, 123, 0]);
+      });
+    }
+  }
+
+  // ── STATE MUTATORS ──
+  const togStep   = useCallback((ti,ni,step) => set(s => {
+    const t=s.tracks[ti], p=t.pats[t.curPat], k=`${ni}_${step}`, ns={...p.steps};
+    if(ns[k]) delete ns[k]; else ns[k]={vel:100,len:0.5};
+    return {...s,tracks:s.tracks.map((tr,i)=>i!==ti?tr:{...tr,pats:tr.pats.map((pp,j)=>j!==tr.curPat?pp:{...pp,steps:ns})})};
+  }), []);
+
+  const updStep   = useCallback((ti,ni,step,d) => set(s => {
+    const t=s.tracks[ti], p=t.pats[t.curPat], k=`${ni}_${step}`;
+    if(!p.steps[k]) return s;
+    const ns={...p.steps,[k]:{...p.steps[k],...d}};
+    return {...s,tracks:s.tracks.map((tr,i)=>i!==ti?tr:{...tr,pats:tr.pats.map((pp,j)=>j!==tr.curPat?pp:{...pp,steps:ns})})};
+  }), []);
+
+  const scrollY   = useCallback((ti,d) => set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,yOff:Math.max(0,t.yOff+d)})})), []);
+  const scrollX   = useCallback((ti,d) => set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,xOff:Math.max(0,Math.min(7,t.xOff+d))})})), []);
+  const selPat    = useCallback((ti,pi)=> set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,curPat:pi})})), []);
+  const selTrk    = useCallback(i =>     set(s=>({...s,selTrk:i})), []);
+  const togMute   = useCallback(i =>     set(s=>({...s,tracks:s.tracks.map((t,j)=>j!==i?t:{...t,muted:!t.muted})})), []);
+  const setCh     = useCallback((i,ch)=> set(s=>({...s,tracks:s.tracks.map((t,j)=>j!==i?t:{...t,midiCh:ch})})), []);
+  const setPatLen = useCallback((ti,l)=> set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,pats:t.pats.map((p,j)=>j!==t.curPat?p:{...p,len:l})})})), []);
+  const clearPat  = useCallback(ti =>    set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,pats:t.pats.map((p,j)=>j!==t.curPat?p:{...p,steps:{}})})})), []);
+
+  const trk = st.tracks[st.selTrk];
+
+  return (
+    <div className="app">
+      <Header st={st} set={set} onPlay={startPlay} onStop={stopPlay}
+        midiOuts={midiOuts} selOut={selOut} setSel={setSelOut} midiOk={midiOk}/>
+      <div className="main">
+        {st.mode === 'seq' && <>
+          <TrkPanel tracks={st.tracks} sel={st.selTrk}
+            onSel={selTrk} onMute={togMute} onCh={setCh}/>
+          <SeqGrid key={st.selTrk}
+            track={trk} trkIdx={st.selTrk}
+            root={st.root} scale={st.scale}
+            absStep={absStep} playing={st.playing}
+            onToggle={togStep} onUpdate={updStep}
+            onScrollY={scrollY} onScrollX={scrollX}
+            onPatSel={selPat} onPatLen={setPatLen} onClear={clearPat}/>
+        </>}
+        {st.mode === 'song' && <SongView st={st} set={set} curSlot={curSlot}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
