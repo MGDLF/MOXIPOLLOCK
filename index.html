@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>POLY — Step Sequencer</title>
+  <title>MOXI — Step Sequencer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -302,7 +302,7 @@ function velAlpha(v) { return 0.15 + (v / 127) * 0.85; }
 function Header({st, set, onPlay, onStop, midiOuts, selOut, setSel, midiOk}) {
   return (
     <div className="hdr">
-      <div className="logo">POLY</div>
+      <div className="logo">MOXI</div>
       <div className="cg">
         <button className={`mbtn ${st.mode==='seq'?'on':''}`}  onClick={()=>set(s=>({...s,mode:'seq'}))}>SEQ</button>
         <button className={`mbtn ${st.mode==='song'?'on':''}`} onClick={()=>set(s=>({...s,mode:'song'}))}>SONG</button>
@@ -558,6 +558,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
             onClick={()=>onPatSel(trkIdx,i)}>{i+1}</button>
         ))}
         <div style={{flex:1}}/>
+        <span style={{fontSize:9,color:'var(--tx3)',letterSpacing:'0.5px',whiteSpace:'nowrap'}}>MOXI by Mexipollock</span>
         <button className="xbtn red" onClick={()=>{if(confirm('Clear this pattern?'))onClear(trkIdx);}}>CLEAR</button>
       </div>
 
