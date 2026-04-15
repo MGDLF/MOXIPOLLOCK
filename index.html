@@ -109,8 +109,6 @@
       display: flex; flex-direction: column; flex: 1;
       overflow: hidden; padding: 6px 8px 4px; gap: 5px; min-width: 0;
     }
-
-    /* Pattern row */
     .prow { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
     .pbtn {
       width: 24px; height: 22px; border: 1px solid var(--bd); background: var(--bg2);
@@ -150,8 +148,6 @@
     .grows { display: flex; flex-direction: column; flex: 1; min-height: 0; }
     .grow  { display: grid; flex: 1; gap: 2px; padding: 2px; border-bottom: 1px solid var(--bd); min-height: 0; }
     .grow:last-child { border-bottom: none; }
-
-    /* CELLS */
     .cell {
       border-radius: 2px; position: relative; overflow: hidden;
       border: 1px solid transparent; min-height: 0; cursor: pointer;
@@ -161,31 +157,21 @@
     .cell.off.ph { background: rgba(255,255,255,.03); }
     .cell.drag-active { outline: 2px solid rgba(255,255,255,.5); outline-offset: -1px; z-index: 2; }
     .cell > * { pointer-events: none; }
-    .vbar {
-      position: absolute; bottom: 0; left: 0; height: 3px;
-      border-radius: 0 0 2px 2px;
-    }
+    .vbar { position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 0 0 2px 2px; }
     .vcap {
       position: absolute; inset: 0; display: flex; align-items: center;
       justify-content: center; font-size: 9px; font-weight: 900;
       text-shadow: 0 1px 3px rgba(0,0,0,.9); letter-spacing: 0; z-index: 1;
     }
-    .darr {
-      position: absolute; left: 50%; transform: translateX(-50%);
-      font-size: 7px; opacity: .35; line-height: 1;
-    }
+    .darr { position: absolute; left: 50%; transform: translateX(-50%); font-size: 7px; opacity: .35; line-height: 1; }
     .darr.up { top: 1px; }
     .darr.dn { bottom: 2px; }
-
-    /* Velocity HUD */
     .vel-hud {
       position: absolute; top: 6px; right: 6px; z-index: 20;
       background: var(--bg1); border: 1px solid; border-radius: 3px;
       padding: 3px 9px; font-size: 11px; font-weight: bold;
       letter-spacing: 1px; pointer-events: none;
     }
-
-    /* Grid controls */
     .gc { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
     .scbtn {
       width: 28px; height: 28px; border: 1px solid var(--bd2); background: var(--bg2);
@@ -229,7 +215,7 @@
     .sng-cell.slot { outline: 1px solid rgba(255,255,255,.28); outline-offset: -1px; }
     .sng-tip   { font-size: 9px; color: var(--tx3); flex-shrink: 0; }
 
-    /* ── PLAY MODE ── */
+    /* ── PLAY MODE: CHROMATIC PUSH GRID ── */
     .play-area {
       display: flex; flex-direction: column; flex: 1;
       overflow: hidden; padding: 6px 8px 6px; gap: 6px; min-width: 0;
@@ -237,38 +223,76 @@
     .play-nav {
       display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap;
     }
-    .play-pads {
-      display: flex; flex-direction: column; flex: 1; gap: 3px; overflow: hidden;
-      touch-action: none;
+    /* The 8×8 grid wrapper */
+    .chroma-wrap {
+      flex: 1; display: flex; flex-direction: column; gap: 3px;
+      overflow: hidden; min-height: 0; touch-action: none;
     }
-    .pad {
-      flex: 1; display: flex; align-items: center; justify-content: space-between;
-      border: 1px solid var(--bd2); border-radius: 4px; padding: 0 14px;
-      cursor: pointer; min-height: 0; position: relative; overflow: hidden;
-      touch-action: none;
+    .chroma-row {
+      display: flex; flex: 1; gap: 3px; min-height: 0;
     }
-    .pad > * { pointer-events: none; }
-    .pad-glow {
-      position: absolute; inset: 0; opacity: 0;
-      transition: opacity .06s;
+    /* Individual pad */
+    .cpad {
+      flex: 1; border-radius: 5px; border: 1px solid;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer; min-width: 0; min-height: 0;
+      position: relative; overflow: hidden;
+      touch-action: none; transition: box-shadow .05s;
     }
-    .pad-glow.on { opacity: 1; }
-    .pad-left { display: flex; align-items: center; gap: 10px; z-index: 1; }
-    .pad-note { font-size: 15px; font-weight: bold; letter-spacing: 1px; }
-    .pad-root-badge {
-      font-size: 7px; letter-spacing: 2px; padding: 1px 5px;
-      border-radius: 2px; border: 1px solid;
+    .cpad > * { pointer-events: none; }
+    /* Off-scale: dark, barely visible */
+    .cpad.out {
+      background: #111;
+      border-color: #1e1e1e;
     }
-    .pad-midi { font-size: 10px; color: var(--tx3); z-index: 1; }
+    /* In-scale (not root): track color tinted */
+    .cpad.in-scale {
+      border-color: rgba(var(--tc-rgb), .3);
+    }
+    /* Root note: always prominent */
+    .cpad.root {
+      border-color: rgba(var(--tc-rgb), .7);
+    }
+    /* Octave C marker (non-root C notes): subtle white tint */
+    .cpad.octave-c {
+      background: rgba(255,255,255,.04);
+      border-color: #333;
+    }
+    /* Active (pressed) state */
+    .cpad.active {
+      border-color: #fff !important;
+      box-shadow: 0 0 16px rgba(255,255,255,.4), inset 0 0 12px rgba(255,255,255,.15);
+    }
+    .cpad.root.active {
+      box-shadow: 0 0 20px rgba(var(--tc-rgb),.7), inset 0 0 14px rgba(var(--tc-rgb),.3);
+    }
+    /* Note label */
+    .cpad-label {
+      font-size: 10px; font-weight: bold; letter-spacing: 0.5px;
+      text-align: center; line-height: 1.1;
+    }
+    .cpad-octave {
+      font-size: 7px; opacity: .55; letter-spacing: 0;
+    }
+    /* Legend at bottom */
+    .play-legend {
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0; flex-wrap: wrap;
+    }
+    .leg-item {
+      display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--tx3);
+    }
+    .leg-dot {
+      width: 9px; height: 9px; border-radius: 2px; border: 1px solid;
+    }
+    /* Inspiration bar */
     .insp-bar {
       display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 2px 0;
     }
     .insp-track {
       flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden;
     }
-    .insp-fill {
-      height: 100%; border-radius: 3px; transition: width .15s;
-    }
+    .insp-fill { height: 100%; border-radius: 3px; transition: width .12s; }
     .insp-label { font-size: 9px; color: var(--tx3); white-space: nowrap; min-width: 110px; }
   </style>
 </head>
@@ -309,6 +333,11 @@ const TCOLORS = [
 const N_TRK = 8, N_PAT = 16, ROWS = 8, COLS = 16;
 const INSP_PAT = 15; // PAT 16 = index 15
 
+// Push-style layout constants
+const PUSH_COLS   = 8;
+const PUSH_ROWS   = 8;
+const ROW_STEP    = 5; // semitones per row (Push default: 5ths layout)
+
 // ═══════════════════════════════════════════════════════
 // UTILITIES
 // ═══════════════════════════════════════════════════════
@@ -326,7 +355,14 @@ function midiLabel(m) {
   return ROOT_NAMES[m % 12] + (Math.floor(m / 12) - 1);
 }
 function mkPat()    { return { steps: {}, len: 16 }; }
-function mkTrack(i) { return { id:i, midiCh:i+1, muted:false, pats:Array.from({length:N_PAT},mkPat), curPat:0, yOff:0, xOff:0 }; }
+// Find the scale-note index of the first note >= a target MIDI note (used for default scroll pos)
+function scaleIndexOf(notes, targetMidi) {
+  const idx = notes.findIndex(n => n >= targetMidi);
+  return idx < 0 ? 0 : idx;
+}
+const _defaultScale = buildScale(0, 'Major');
+const _defaultYOff  = scaleIndexOf(_defaultScale, 48); // 48 = C3
+function mkTrack(i) { return { id:i, midiCh:i+1, muted:false, pats:Array.from({length:N_PAT},mkPat), curPat:0, yOff:_defaultYOff, xOff:0 }; }
 function mkState()  {
   return { bpm:120, playing:false, mode:'seq', selTrk:0, root:0, scale:'Major',
            tracks:Array.from({length:N_TRK},(_,i)=>mkTrack(i)),
@@ -427,7 +463,6 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
                   onScrollY, onScrollX, onPatSel, onPatLen, onClear, onPreview}) {
   const c      = TCOLORS[trkIdx];
   const [liveDrag, setLiveDrag] = useState(null);
-
   const gridRef  = useRef(null);
   const hRef     = useRef({});
   const patRef   = useRef(track.pats[track.curPat]);
@@ -453,130 +488,85 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
-
     let ds = null;
 
     function findCell(x, y) {
       let el = document.elementFromPoint(x, y);
       while (el && el !== grid) {
-        if (el.dataset && el.dataset.ni !== undefined) {
-          return { ni: +el.dataset.ni, step: +el.dataset.step };
-        }
+        if (el.dataset && el.dataset.ni !== undefined) return { ni:+el.dataset.ni, step:+el.dataset.step };
         el = el.parentElement;
       }
       return null;
     }
-
     function pressStart(ni, step, clientY, touchId) {
-      const p  = patRef.current;
-      const k  = `${ni}_${step}`;
-      const sd = p.steps[k];
-      const vel = sd ? sd.vel : 100;
-      ds = { ni, step, k, touchId,
-             startY: clientY, startVel: vel,
-             liveVel: null, wasActive: !!sd, dragging: false };
-      hRef.current.onPreview(ni, true, vel);
+      const p=patRef.current, k=`${ni}_${step}`, sd=p.steps[k], vel=sd?sd.vel:100;
+      ds={ni,step,k,touchId,startY:clientY,startVel:vel,liveVel:null,wasActive:!!sd,dragging:false};
+      hRef.current.onPreview(ni,true,vel);
     }
-
     function pressMove(clientY, touchId) {
-      if (!ds || ds.touchId !== touchId) return;
-      const dy = ds.startY - clientY;
-      if (Math.abs(dy) > 8) {
-        ds.dragging = true;
-        if (ds.wasActive) {
-          const v = Math.min(127, Math.max(1, Math.round(ds.startVel + dy)));
-          if (v !== ds.liveVel) {
-            ds.liveVel = v;
-            setLiveDrag({ ni: ds.ni, step: ds.step, vel: v });
-          }
+      if(!ds||ds.touchId!==touchId) return;
+      const dy=ds.startY-clientY;
+      if(Math.abs(dy)>8){
+        ds.dragging=true;
+        if(ds.wasActive){
+          const v=Math.min(127,Math.max(1,Math.round(ds.startVel+dy)));
+          if(v!==ds.liveVel){ds.liveVel=v;setLiveDrag({ni:ds.ni,step:ds.step,vel:v});}
         }
       }
     }
-
     function pressEnd(touchId) {
-      if (!ds || ds.touchId !== touchId) return;
-      const { onToggle, onUpdate, trkIdx } = hRef.current;
-      if (!ds.dragging) {
-        onToggle(trkIdx, ds.ni, ds.step);
-      } else if (ds.wasActive && ds.liveVel !== null) {
-        onUpdate(trkIdx, ds.ni, ds.step, { vel: ds.liveVel });
-      }
-      ds = null;
-      setLiveDrag(null);
+      if(!ds||ds.touchId!==touchId) return;
+      const{onToggle,onUpdate,trkIdx}=hRef.current;
+      if(!ds.dragging) onToggle(trkIdx,ds.ni,ds.step);
+      else if(ds.wasActive&&ds.liveVel!==null) onUpdate(trkIdx,ds.ni,ds.step,{vel:ds.liveVel});
+      ds=null; setLiveDrag(null);
     }
-
-    function pressCancel() {
-      ds = null;
-      setLiveDrag(null);
+    function pressCancel(){ds=null;setLiveDrag(null);}
+    function onTouchStart(e){
+      if(ds)return;
+      const t=e.touches[0],cell=findCell(t.clientX,t.clientY);
+      if(!cell)return; e.preventDefault();
+      pressStart(cell.ni,cell.step,t.clientY,t.identifier);
     }
-
-    function onTouchStart(e) {
-      if (ds) return;
-      const t    = e.touches[0];
-      const cell = findCell(t.clientX, t.clientY);
-      if (!cell) return;
-      e.preventDefault();
-      pressStart(cell.ni, cell.step, t.clientY, t.identifier);
+    function onTouchMove(e){
+      if(!ds)return;
+      let tracked=null;
+      for(let i=0;i<e.changedTouches.length;i++) if(e.changedTouches[i].identifier===ds.touchId){tracked=e.changedTouches[i];break;}
+      if(!tracked)return; e.preventDefault();
+      pressMove(tracked.clientY,tracked.identifier);
     }
-
-    function onTouchMove(e) {
-      if (!ds) return;
-      let tracked = null;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === ds.touchId) {
-          tracked = e.changedTouches[i]; break;
-        }
-      }
-      if (!tracked) return;
-      e.preventDefault();
-      pressMove(tracked.clientY, tracked.identifier);
+    function onTouchEnd(e){
+      if(!ds)return;
+      for(let i=0;i<e.changedTouches.length;i++) if(e.changedTouches[i].identifier===ds.touchId){pressEnd(ds.touchId);return;}
     }
+    function onTouchCancel(){pressCancel();}
+    const MID=-1;
+    function onMouseDown(e){if(e.button!==0)return;const cell=findCell(e.clientX,e.clientY);if(!cell)return;pressStart(cell.ni,cell.step,e.clientY,MID);}
+    function onMouseMove(e){pressMove(e.clientY,MID);}
+    function onMouseUp(){if(ds&&ds.touchId===MID)pressEnd(MID);}
 
-    function onTouchEnd(e) {
-      if (!ds) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === ds.touchId) {
-          pressEnd(ds.touchId); return;
-        }
-      }
-    }
-
-    function onTouchCancel() { pressCancel(); }
-
-    const MOUSE_ID = -1;
-    function onMouseDown(e) {
-      if (e.button !== 0) return;
-      const cell = findCell(e.clientX, e.clientY);
-      if (!cell) return;
-      pressStart(cell.ni, cell.step, e.clientY, MOUSE_ID);
-    }
-    function onMouseMove(e) { pressMove(e.clientY, MOUSE_ID); }
-    function onMouseUp()    { if (ds && ds.touchId === MOUSE_ID) pressEnd(MOUSE_ID); }
-
-    grid.addEventListener('touchstart',  onTouchStart, { passive: false });
-    grid.addEventListener('touchmove',   onTouchMove,  { passive: false });
-    grid.addEventListener('touchend',    onTouchEnd);
-    grid.addEventListener('touchcancel', onTouchCancel);
-    grid.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup',   onMouseUp);
-
-    return () => {
-      grid.removeEventListener('touchstart',  onTouchStart);
-      grid.removeEventListener('touchmove',   onTouchMove);
-      grid.removeEventListener('touchend',    onTouchEnd);
-      grid.removeEventListener('touchcancel', onTouchCancel);
-      grid.removeEventListener('mousedown',   onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup',   onMouseUp);
+    grid.addEventListener('touchstart', onTouchStart,{passive:false});
+    grid.addEventListener('touchmove',  onTouchMove, {passive:false});
+    grid.addEventListener('touchend',   onTouchEnd);
+    grid.addEventListener('touchcancel',onTouchCancel);
+    grid.addEventListener('mousedown',  onMouseDown);
+    window.addEventListener('mousemove',onMouseMove);
+    window.addEventListener('mouseup',  onMouseUp);
+    return()=>{
+      grid.removeEventListener('touchstart', onTouchStart);
+      grid.removeEventListener('touchmove',  onTouchMove);
+      grid.removeEventListener('touchend',   onTouchEnd);
+      grid.removeEventListener('touchcancel',onTouchCancel);
+      grid.removeEventListener('mousedown',  onMouseDown);
+      window.removeEventListener('mousemove',onMouseMove);
+      window.removeEventListener('mouseup',  onMouseUp);
     };
-  }, []);
+  },[]);
 
-  const gridCols = { gridTemplateColumns: `repeat(${COLS},1fr)` };
+  const gridCols = {gridTemplateColumns:`repeat(${COLS},1fr)`};
 
   return (
     <div className="sarea">
-      {/* Pattern selector */}
       <div className="prow">
         <span className="lbl" style={{color:c.hex,marginRight:3}}>PAT</span>
         {track.pats.map((p,i) => (
@@ -591,9 +581,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
         <button className="xbtn red" onClick={()=>{if(confirm('Clear this pattern?'))onClear(trkIdx);}}>CLEAR</button>
       </div>
 
-      {/* Grid */}
       <div className="gwrap" ref={gridRef} onContextMenu={e=>e.preventDefault()}>
-        {/* Note labels */}
         <div className="ncol">
           <div className="ncol-sp"/>
           {rows.map(({r,ni,midi,isRoot}) => (
@@ -602,53 +590,34 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
             </div>
           ))}
         </div>
-
-        {/* Grid body */}
         <div className="gbody">
           <div className="snums" style={gridCols}>
             {steps.map((s,col) => (
               <div key={s} className={`snum ${s%4===0?'bar':''} ${col===playCol?'now':''}`}>
-                {col%4===0 ? s+1 : '·'}
+                {col%4===0?s+1:'·'}
               </div>
             ))}
           </div>
-
           <div className="grows">
             {rows.map(({r,ni}) => (
               <div key={r} className="grow" style={gridCols}>
                 {steps.map((step,col) => {
-                  const k      = `${ni}_${step}`;
-                  const sd     = pat.steps[k];
-                  const isOn   = !!sd;
-                  const isPh   = col === playCol;
-                  const isDrag = liveDrag?.ni===ni && liveDrag?.step===step;
-                  const dv     = isDrag ? liveDrag.vel : (isOn ? sd.vel : null);
-                  const alpha  = dv != null ? velAlpha(dv) : 0;
-
+                  const k=`${ni}_${step}`, sd=pat.steps[k], isOn=!!sd, isPh=col===playCol;
+                  const isDrag=liveDrag?.ni===ni&&liveDrag?.step===step;
+                  const dv=isDrag?liveDrag.vel:(isOn?sd.vel:null);
+                  const alpha=dv!=null?velAlpha(dv):0;
                   return (
                     <div key={step}
                       className={`cell ${isOn||isDrag?'on':'off'} ${isPh?'ph':''} ${isDrag?'drag-active':''}`}
-                      data-ni={ni}
-                      data-step={step}
-                      style={(isOn||isDrag) ? {
-                        background: `rgba(${c.rgb},${alpha})`,
-                        boxShadow:  `0 0 ${3+alpha*7}px rgba(${c.rgb},${alpha*.55})`,
-                      } : {}}
+                      data-ni={ni} data-step={step}
+                      style={(isOn||isDrag)?{background:`rgba(${c.rgb},${alpha})`,boxShadow:`0 0 ${3+alpha*7}px rgba(${c.rgb},${alpha*.55})`}:{}}
                     >
-                      {(isOn||isDrag) && dv!=null && (
-                        <div className="vbar" style={{width:`${dv/127*100}%`, background:c.hex, opacity:.75}}/>
-                      )}
-                      {isDrag && (
-                        <div className="vcap" style={{color: alpha>0.55 ? 'rgba(0,0,0,.85)' : '#fff'}}>
-                          {liveDrag.vel}
-                        </div>
-                      )}
-                      {isOn && !isDrag && !liveDrag && (
-                        <>
-                          <div className="darr up" style={{color:`rgba(${c.rgb},.5)`}}>▲</div>
-                          <div className="darr dn" style={{color:`rgba(${c.rgb},.5)`}}>▼</div>
-                        </>
-                      )}
+                      {(isOn||isDrag)&&dv!=null&&<div className="vbar" style={{width:`${dv/127*100}%`,background:c.hex,opacity:.75}}/>}
+                      {isDrag&&<div className="vcap" style={{color:alpha>0.55?'rgba(0,0,0,.85)':'#fff'}}>{liveDrag.vel}</div>}
+                      {isOn&&!isDrag&&!liveDrag&&<>
+                        <div className="darr up" style={{color:`rgba(${c.rgb},.5)`}}>▲</div>
+                        <div className="darr dn" style={{color:`rgba(${c.rgb},.5)`}}>▼</div>
+                      </>}
                     </div>
                   );
                 })}
@@ -656,22 +625,21 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
             ))}
           </div>
         </div>
-
-        {liveDrag && (
-          <div className="vel-hud" style={{borderColor:c.hex, color:c.hex}}>
-            VEL {liveDrag.vel}
-          </div>
-        )}
+        {liveDrag&&<div className="vel-hud" style={{borderColor:c.hex,color:c.hex}}>VEL {liveDrag.vel}</div>}
       </div>
 
-      {/* Controls */}
       <div className="gc">
         <div className="cg">
           <span className="lbl">NOTES</span>
-          <button className="scbtn" onClick={()=>onScrollY(trkIdx,1)}  disabled={yOff>=maxY} title="Higher notes">▲</button>
-          <button className="scbtn" onClick={()=>onScrollY(trkIdx,-1)} disabled={yOff<=0}   title="Lower notes">▼</button>
+          {(() => {
+            const oct = (SCALES[scale] || SCALES['Major']).length; // scale notes per octave
+            return (<>
+              <button className="scbtn" onClick={()=>onScrollY(trkIdx, oct)}  disabled={yOff>=maxY} title="Up one octave">▲</button>
+              <button className="scbtn" onClick={()=>onScrollY(trkIdx,-oct)} disabled={yOff<=0}    title="Down one octave">▼</button>
+            </>);
+          })()}
           <span className="lbl" style={{fontSize:9}}>
-            {midiLabel(sNotes[yOff])}–{midiLabel(sNotes[Math.min(yOff+7, sNotes.length-1)])}
+            {midiLabel(sNotes[yOff])}–{midiLabel(sNotes[Math.min(yOff+7,sNotes.length-1)])}
           </span>
         </div>
         <div className="sep"/>
@@ -684,9 +652,8 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
         <div className="sep"/>
         <div className="cg">
           <span className="lbl">LEN</span>
-          {[16,32,64,128].map(l => (
-            <button key={l} className={`xbtn ${pat.len===l?'on':''}`}
-              onClick={()=>onPatLen(trkIdx,l)}>{l}</button>
+          {[16,32,64,128].map(l=>(
+            <button key={l} className={`xbtn ${pat.len===l?'on':''}`} onClick={()=>onPatLen(trkIdx,l)}>{l}</button>
           ))}
         </div>
         <div className="sep"/>
@@ -700,13 +667,8 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
 // SONG VIEW
 // ═══════════════════════════════════════════════════════
 function SongView({st, set, curSlot}) {
-  function click(slot, ti) {
-    set(s => ({
-      ...s,
-      song: s.song.map((row,si) => si!==slot ? row :
-        row.map((v,i) => i!==ti ? v : (v!==null ? null : s.tracks[ti].curPat))
-      ),
-    }));
+  function click(slot,ti){
+    set(s=>({...s,song:s.song.map((row,si)=>si!==slot?row:row.map((v,i)=>i!==ti?v:(v!==null?null:s.tracks[ti].curPat)))}));
   }
   return (
     <div className="sng-area">
@@ -717,83 +679,88 @@ function SongView({st, set, curSlot}) {
       <div className="sng-wrap">
         <div className="sng-trklabels">
           <div className="sng-sp"/>
-          {st.tracks.map((_,i) => (
-            <div key={i} className="sng-tl" style={{color:TCOLORS[i].hex}}>TR{i+1}</div>
-          ))}
+          {st.tracks.map((_,i)=><div key={i} className="sng-tl" style={{color:TCOLORS[i].hex}}>TR{i+1}</div>)}
         </div>
         <div className="sng-inner">
           <div className="sng-slots">
-            {Array.from({length:16},(_,i) => (
-              <div key={i} className={`sng-sn ${i===curSlot&&st.playing?'cur':''}`}>{i+1}</div>
-            ))}
+            {Array.from({length:16},(_,i)=><div key={i} className={`sng-sn ${i===curSlot&&st.playing?'cur':''}`}>{i+1}</div>)}
           </div>
-          {st.tracks.map((_,ti) => {
-            const c = TCOLORS[ti];
+          {st.tracks.map((_,ti)=>{
+            const c=TCOLORS[ti];
             return (
               <div key={ti} className="sng-row">
-                {st.song.map((row,slot) => {
-                  const v = row[ti];
-                  return (
-                    <div key={slot}
-                      className={`sng-cell ${v!==null?'filled':''} ${slot===curSlot&&st.playing?'slot':''}`}
-                      style={v!==null?{'--tc':c.hex,'--tc-rgb':c.rgb}:{}}
-                      onClick={()=>click(slot,ti)}>
-                      {v!==null ? v+1 : ''}
-                    </div>
-                  );
+                {st.song.map((row,slot)=>{
+                  const v=row[ti];
+                  return <div key={slot}
+                    className={`sng-cell ${v!==null?'filled':''} ${slot===curSlot&&st.playing?'slot':''}`}
+                    style={v!==null?{'--tc':c.hex,'--tc-rgb':c.rgb}:{}}
+                    onClick={()=>click(slot,ti)}>{v!==null?v+1:''}</div>;
                 })}
               </div>
             );
           })}
         </div>
       </div>
-      <div className="sng-tip">
-        16 slots (columns) × 8 tracks (rows). Number = pattern index. Build patterns in SEQ mode then arrange here.
-      </div>
+      <div className="sng-tip">16 slots (columns) × 8 tracks (rows). Number = pattern index. Build patterns in SEQ mode then arrange here.</div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════
-// PLAY VIEW — polyphonic MIDI controller with inspiration catcher
+// PLAY VIEW — Push-style chromatic 8×8 grid
 // ═══════════════════════════════════════════════════════
-function PlayView({selTrk, root, scale, onNoteOn, onNoteOff, inspCount}) {
-  const c = TCOLORS[selTrk];
-  const sNotes = useMemo(() => buildScale(root, scale), [root, scale]);
-  const maxY   = Math.max(0, sNotes.length - 8);
+// Layout: right = +1 semitone, up = +5 semitones (same as Ableton Push)
+// baseMidi = MIDI note for bottom-left pad (row 0, col 0)
+// pad(vrow, col): midi = baseMidi + (PUSH_ROWS-1-vrow)*ROW_STEP + col
+function PlayView({selTrk, root, scale, onMidiOn, onMidiOff, inspCount}) {
+  const c        = TCOLORS[selTrk];
+  const scaleSet = useMemo(() => {
+    const ivs = SCALES[scale] || SCALES['Major'];
+    return new Set(ivs.map(iv => (iv + root) % 12));
+  }, [root, scale]);
 
-  // Start near middle of the scale range
-  const [yOff, setYOff] = useState(() => Math.max(0, Math.floor(sNotes.length / 2) - 4));
+  // baseMidi = bottom-left pad. Default: C2 = 36
+  const MAX_GRID_SPAN = (PUSH_ROWS - 1) * ROW_STEP + (PUSH_COLS - 1); // 42 semitones
+  const [baseMidi, setBaseMidi] = useState(36);
+  const minBase = 0, maxBase = 127 - MAX_GRID_SPAN;
 
-  // Active pads (Set of ni values currently pressed)
-  const [activePads, setActivePads] = useState(() => new Set());
+  // Active pads: Set of MIDI note numbers currently pressed
+  const [activeSet, setActiveSet] = useState(() => new Set());
 
   const wrapRef  = useRef(null);
   const hRef     = useRef({});
-  // Map from touchId → ni currently pressed by that touch
-  const touchMap = useRef(new Map());
+  const touchMap = useRef(new Map()); // touchId → midi
 
-  // Keep callbacks fresh without re-registering native listeners
-  useEffect(() => { hRef.current = { onNoteOn, onNoteOff }; });
+  useEffect(() => { hRef.current = { onMidiOn, onMidiOff }; });
 
-  // Visible pads: top of list = highest note, bottom = lowest
-  const visPads = useMemo(() => {
-    return Array.from({length: 8}, (_, r) => {
-      const ni   = yOff + (7 - r);
-      const midi = sNotes[ni] ?? null;
-      return { r, ni, midi, isRoot: midi != null && (midi % 12) === root };
-    });
-  }, [yOff, sNotes, root]);
+  // Build grid data: 8 rows × 8 cols
+  const grid = useMemo(() => {
+    return Array.from({length: PUSH_ROWS}, (_, vrow) =>
+      Array.from({length: PUSH_COLS}, (_, col) => {
+        const midi    = baseMidi + (PUSH_ROWS - 1 - vrow) * ROW_STEP + col;
+        const pc      = midi % 12;         // pitch class 0-11
+        const isRoot  = pc === root;
+        const inScale = scaleSet.has(pc);
+        const isOctC  = pc === 0 && !isRoot; // C notes that aren't root
+        const valid   = midi >= 0 && midi <= 127;
+        return { vrow, col, midi, pc, isRoot, inScale, isOctC, valid };
+      })
+    );
+  }, [baseMidi, root, scaleSet]);
+
+  // Range label for nav bar
+  const loMidi = baseMidi, hiMidi = baseMidi + MAX_GRID_SPAN;
+  const rangeLabel = `${midiLabel(loMidi)} – ${midiLabel(hiMidi)}`;
 
   // Native multi-touch engine
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
 
-    function findPad(x, y) {
+    function findMidi(x, y) {
       let el = document.elementFromPoint(x, y);
       while (el && el !== wrap) {
-        if (el.dataset && el.dataset.ni !== undefined) return +el.dataset.ni;
+        if (el.dataset && el.dataset.midi !== undefined) return +el.dataset.midi;
         el = el.parentElement;
       }
       return null;
@@ -801,41 +768,37 @@ function PlayView({selTrk, root, scale, onNoteOn, onNoteOff, inspCount}) {
 
     function onTouchStart(e) {
       e.preventDefault();
-      const map  = touchMap.current;
-      const added = [];
+      const map = touchMap.current;
       for (let i = 0; i < e.changedTouches.length; i++) {
-        if (map.size >= 5) break; // max 5 simultaneous
-        const t  = e.changedTouches[i];
+        if (map.size >= 5) break;
+        const t    = e.changedTouches[i];
         if (map.has(t.identifier)) continue;
-        const ni = findPad(t.clientX, t.clientY);
-        if (ni == null) continue;
-        map.set(t.identifier, ni);
-        added.push(ni);
-        hRef.current.onNoteOn(ni);
+        const midi = findMidi(t.clientX, t.clientY);
+        if (midi == null) continue;
+        map.set(t.identifier, midi);
+        hRef.current.onMidiOn(midi);
       }
-      if (added.length) setActivePads(new Set(map.values()));
+      setActiveSet(new Set(map.values()));
     }
 
     function onTouchMove(e) {
       e.preventDefault();
-      const map     = touchMap.current;
-      let   changed = false;
+      const map = touchMap.current;
+      let changed = false;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
         if (!map.has(t.identifier)) continue;
-        const oldNi = map.get(t.identifier);
-        const newNi = findPad(t.clientX, t.clientY);
-        if (newNi == null || newNi === oldNi) continue;
-        // Glide: Note Off old → Note On new
-        // Only send Note Off if no other finger is holding oldNi
-        const otherHoldsOld = [...map.entries()]
-          .some(([id, n]) => id !== t.identifier && n === oldNi);
-        if (!otherHoldsOld) hRef.current.onNoteOff(oldNi);
-        map.set(t.identifier, newNi);
-        hRef.current.onNoteOn(newNi);
+        const oldMidi = map.get(t.identifier);
+        const newMidi = findMidi(t.clientX, t.clientY);
+        if (newMidi == null || newMidi === oldMidi) continue;
+        // Glide: only send Note Off for old if no other finger holds it
+        const otherHoldsOld = [...map.entries()].some(([id,m]) => id !== t.identifier && m === oldMidi);
+        if (!otherHoldsOld) hRef.current.onMidiOff(oldMidi);
+        map.set(t.identifier, newMidi);
+        hRef.current.onMidiOn(newMidi);
         changed = true;
       }
-      if (changed) setActivePads(new Set(map.values()));
+      if (changed) setActiveSet(new Set(map.values()));
     }
 
     function onTouchEnd(e) {
@@ -843,51 +806,46 @@ function PlayView({selTrk, root, scale, onNoteOn, onNoteOff, inspCount}) {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
         if (!map.has(t.identifier)) continue;
-        const ni = map.get(t.identifier);
+        const midi = map.get(t.identifier);
         map.delete(t.identifier);
-        const stillHeld = [...map.values()].includes(ni);
-        if (!stillHeld) hRef.current.onNoteOff(ni);
+        const stillHeld = [...map.values()].includes(midi);
+        if (!stillHeld) hRef.current.onMidiOff(midi);
       }
-      setActivePads(new Set(map.values()));
+      setActiveSet(new Set(map.values()));
     }
 
     function onTouchCancel(e) { onTouchEnd(e); }
 
-    // Mouse support (desktop)
-    let mouseNi = null;
+    // Mouse (desktop)
+    let mouseMidi = null;
     function onMouseDown(e) {
       if (e.button !== 0) return;
-      const ni = findPad(e.clientX, e.clientY);
-      if (ni == null) return;
-      mouseNi = ni;
-      setActivePads(new Set([ni]));
-      hRef.current.onNoteOn(ni);
+      const midi = findMidi(e.clientX, e.clientY);
+      if (midi == null) return;
+      mouseMidi = midi;
+      setActiveSet(new Set([midi]));
+      hRef.current.onMidiOn(midi);
     }
     function onMouseMove(e) {
-      if (mouseNi == null) return;
-      const ni = findPad(e.clientX, e.clientY);
-      if (ni == null || ni === mouseNi) return;
-      hRef.current.onNoteOff(mouseNi);
-      mouseNi = ni;
-      setActivePads(new Set([ni]));
-      hRef.current.onNoteOn(ni);
+      if (mouseMidi == null) return;
+      const midi = findMidi(e.clientX, e.clientY);
+      if (midi == null || midi === mouseMidi) return;
+      hRef.current.onMidiOff(mouseMidi);
+      mouseMidi = midi;
+      setActiveSet(new Set([midi]));
+      hRef.current.onMidiOn(midi);
     }
     function onMouseUp() {
-      if (mouseNi != null) {
-        hRef.current.onNoteOff(mouseNi);
-        mouseNi = null;
-        setActivePads(new Set());
-      }
+      if (mouseMidi != null) { hRef.current.onMidiOff(mouseMidi); mouseMidi = null; setActiveSet(new Set()); }
     }
 
-    wrap.addEventListener('touchstart',  onTouchStart,  { passive: false });
-    wrap.addEventListener('touchmove',   onTouchMove,   { passive: false });
+    wrap.addEventListener('touchstart',  onTouchStart,  {passive:false});
+    wrap.addEventListener('touchmove',   onTouchMove,   {passive:false});
     wrap.addEventListener('touchend',    onTouchEnd);
     wrap.addEventListener('touchcancel', onTouchCancel);
     wrap.addEventListener('mousedown',   onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup',   onMouseUp);
-
     return () => {
       wrap.removeEventListener('touchstart',  onTouchStart);
       wrap.removeEventListener('touchmove',   onTouchMove);
@@ -903,76 +861,111 @@ function PlayView({selTrk, root, scale, onNoteOn, onNoteOff, inspCount}) {
   const fillPct = Math.round((inspCount / 128) * 100);
 
   return (
-    <div className="play-area">
-      {/* Top nav bar */}
+    <div className="play-area" style={{'--tc':c.hex,'--tc-rgb':c.rgb}}>
+      {/* Navigation bar */}
       <div className="play-nav">
         <span style={{fontSize:10,fontWeight:'bold',color:'#7c4dff',letterSpacing:3}}>PLAY</span>
         <div className="sep"/>
         <span className="lbl">OCT</span>
-        <button className="scbtn" onClick={()=>setYOff(v=>Math.min(maxY,v+8))} disabled={yOff+8>maxY}>▲</button>
-        <button className="scbtn" onClick={()=>setYOff(v=>Math.max(0,v-8))}    disabled={yOff<=0}>▼</button>
-        <span className="lbl" style={{fontSize:9}}>
-          {midiLabel(sNotes[yOff])}–{midiLabel(sNotes[Math.min(yOff+7,sNotes.length-1)])}
-        </span>
+        <button className="scbtn"
+          onClick={()=>setBaseMidi(v=>Math.min(maxBase,v+12))}
+          disabled={baseMidi+12>maxBase}>▲</button>
+        <button className="scbtn"
+          onClick={()=>setBaseMidi(v=>Math.max(minBase,v-12))}
+          disabled={baseMidi<=minBase}>▼</button>
+        <span className="lbl" style={{fontSize:9,minWidth:100}}>{rangeLabel}</span>
         <div style={{flex:1}}/>
-        <span className="lbl" style={{color:'var(--tx3)'}}>
-          tap = burst · hold = sustain · drag = glide · up to 5 voices
-        </span>
-        <span style={{fontSize:9,color:'var(--tx3)',letterSpacing:'0.5px',whiteSpace:'nowrap',marginLeft:8}}>MOXI by Mexipollock</span>
+        <span style={{fontSize:9,color:'var(--tx3)',letterSpacing:'0.5px',whiteSpace:'nowrap'}}>MOXI by Mexipollock</span>
       </div>
 
-      {/* Pad grid */}
-      <div className="play-pads" ref={wrapRef} onContextMenu={e=>e.preventDefault()}>
-        {visPads.map(({r, ni, midi, isRoot}) => {
-          const isActive = activePads.has(ni);
-          const glowAlpha = isActive ? 0.75 : isRoot ? 0.1 : 0.03;
-          return (
-            <div key={r} className="pad"
-              data-ni={ni}
-              style={{
-                borderColor: isActive ? c.hex : isRoot ? `rgba(${c.rgb},.35)` : 'var(--bd2)',
-                boxShadow:   isActive ? `0 0 18px rgba(${c.rgb},.45), inset 0 0 20px rgba(${c.rgb},.12)` : 'none',
-              }}
-            >
-              {/* Background glow */}
-              <div className={`pad-glow ${isActive?'on':''}`}
-                style={{background:`rgba(${c.rgb},${glowAlpha})`}}/>
-              {/* Left: note name + root badge */}
-              <div className="pad-left">
-                <div className="pad-note"
-                  style={{color: isActive ? '#fff' : isRoot ? c.hex : 'var(--tx2)'}}>
-                  {midiLabel(midi)}
+      {/* 8×8 chromatic pad grid */}
+      <div className="chroma-wrap" ref={wrapRef} onContextMenu={e=>e.preventDefault()}>
+        {grid.map((row, vrow) => (
+          <div key={vrow} className="chroma-row">
+            {row.map(({col, midi, isRoot, inScale, isOctC, valid}) => {
+              const isActive = activeSet.has(midi);
+
+              // Background color logic
+              let bg, borderColor, labelColor;
+              if (!valid) {
+                bg = '#0a0a0a'; borderColor = '#111'; labelColor = 'transparent';
+              } else if (isActive) {
+                bg          = isRoot
+                  ? `rgba(${c.rgb},1)`
+                  : inScale ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.75)';
+                borderColor = '#fff';
+                labelColor  = isRoot ? '#000' : '#111';
+              } else if (isRoot) {
+                bg          = `rgba(${c.rgb},0.55)`;
+                borderColor = `rgba(${c.rgb},0.8)`;
+                labelColor  = '#fff';
+              } else if (inScale) {
+                bg          = `rgba(${c.rgb},0.13)`;
+                borderColor = `rgba(${c.rgb},0.28)`;
+                labelColor  = c.hex;
+              } else if (isOctC) {
+                bg = 'rgba(255,255,255,0.04)'; borderColor = '#2a2a2a'; labelColor = '#444';
+              } else {
+                bg = '#111'; borderColor = '#1e1e1e'; labelColor = 'transparent';
+              }
+
+              // Show label: always on root/in-scale, hide on out-of-scale
+              const showLabel = valid && (isRoot || inScale || isOctC);
+              const noteName  = ROOT_NAMES[midi % 12];
+              const octave    = Math.floor(midi / 12) - 1;
+              const showOct   = isRoot || (midi % 12 === 0); // show octave on C and root
+
+              return (
+                <div key={col}
+                  className={`cpad ${isRoot?'root':inScale?'in-scale':isOctC?'octave-c':'out'} ${isActive?'active':''}`}
+                  data-midi={midi}
+                  style={{background: bg, borderColor: borderColor,
+                          boxShadow: isActive
+                            ? (isRoot
+                                ? `0 0 22px rgba(${c.rgb},.8), inset 0 0 14px rgba(${c.rgb},.25)`
+                                : `0 0 18px rgba(255,255,255,.45), inset 0 0 10px rgba(255,255,255,.1)`)
+                            : 'none'}}
+                >
+                  {showLabel && (
+                    <div className="cpad-label" style={{color: labelColor}}>
+                      {noteName}
+                      {showOct && <span className="cpad-octave">{octave}</span>}
+                    </div>
+                  )}
                 </div>
-                {isRoot && (
-                  <div className="pad-root-badge"
-                    style={{color: isActive ? 'rgba(255,255,255,.8)' : c.hex,
-                            borderColor: isActive ? 'rgba(255,255,255,.4)' : `rgba(${c.rgb},.5)`}}>
-                    ROOT
-                  </div>
-                )}
-              </div>
-              {/* Right: MIDI note number */}
-              <div className="pad-midi"
-                style={{color: isActive ? 'rgba(255,255,255,.5)' : 'var(--tx3)'}}>
-                {midi != null ? `#${midi}` : ''}
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
 
-      {/* Inspiration catcher bar */}
-      <div className="insp-bar">
-        <span className="lbl" style={{color:'#7c4dff',fontSize:9,letterSpacing:2}}>INSP</span>
-        <div className="insp-track">
-          <div className="insp-fill" style={{width:`${fillPct}%`, background:'#7c4dff'}}/>
+      {/* Legend + inspiration bar */}
+      <div style={{display:'flex',alignItems:'center',gap:16,flexShrink:0,flexWrap:'wrap'}}>
+        {/* Color legend */}
+        <div className="play-legend">
+          <div className="leg-item">
+            <div className="leg-dot" style={{background:`rgba(${c.rgb},.55)`,borderColor:`rgba(${c.rgb},.8)`}}/>
+            root
+          </div>
+          <div className="leg-item">
+            <div className="leg-dot" style={{background:`rgba(${c.rgb},.13)`,borderColor:`rgba(${c.rgb},.28)`}}/>
+            in scale
+          </div>
+          <div className="leg-item">
+            <div className="leg-dot" style={{background:'#111',borderColor:'#1e1e1e'}}/>
+            chromatic
+          </div>
         </div>
-        <span className="insp-label">
-          {inspCount} / 128 notes → PAT 16
-        </span>
-        {inspCount > 0 && (
-          <span className="lbl" style={{color:'#7c4dff'}}>●</span>
-        )}
+        <div style={{flex:1}}/>
+        {/* Inspiration bar */}
+        <div className="insp-bar" style={{minWidth:220}}>
+          <span className="lbl" style={{color:'#7c4dff',fontSize:9,letterSpacing:2}}>INSP</span>
+          <div className="insp-track">
+            <div className="insp-fill" style={{width:`${fillPct}%`,background:'#7c4dff'}}/>
+          </div>
+          <span className="insp-label">{inspCount} / 128 → PAT 16</span>
+          {inspCount > 0 && <span className="lbl" style={{color:'#7c4dff'}}>●</span>}
+        </div>
       </div>
     </div>
   );
@@ -990,16 +983,16 @@ function App() {
   const [midiOk,   setMidiOk]   = useState(false);
   const [inspCount, setInspCount] = useState(0);
 
-  const audioRef   = useRef(null);
-  const midiRef    = useRef(null);
-  const outRef     = useRef(null);
-  const timerRef   = useRef(null);
-  const stepRef    = useRef(0);
-  const timeRef    = useRef(0);
-  const playRef    = useRef(false);
-  const stRef      = useRef(st);
-  const sNRef      = useRef([]);
-  const inspBufRef = useRef([]); // rolling buffer: [{ni}, ...] max 128
+  const audioRef    = useRef(null);
+  const midiRef     = useRef(null);
+  const outRef      = useRef(null);
+  const timerRef    = useRef(null);
+  const stepRef     = useRef(0);
+  const timeRef     = useRef(0);
+  const playRef     = useRef(false);
+  const stRef       = useRef(st);
+  const sNRef       = useRef([]);
+  const inspBufRef  = useRef([]); // [{midi}, ...] max 128
   const prevModeRef = useRef('seq');
 
   useEffect(() => { stRef.current = st; sNRef.current = buildScale(st.root, st.scale); }, [st]);
@@ -1012,7 +1005,7 @@ function App() {
     if (prevModeRef.current === 'play' && st.mode !== 'play') {
       if (outRef.current) {
         stRef.current.tracks.forEach(t => {
-          outRef.current.send([0xB0 | ((t.midiCh - 1) & 0x0F), 123, 0]);
+          outRef.current.send([0xB0 | ((t.midiCh-1) & 0x0F), 123, 0]);
         });
       }
     }
@@ -1033,103 +1026,91 @@ function App() {
 
   // Scheduler
   function schedStep(absS, audioT) {
-    const s = stRef.current, out = outRef.current;
-    if (!out) return;
-    const now  = window.performance.now();
-    const tMs  = now + Math.max(0, (audioT - audioRef.current.currentTime) * 1000);
-    const sDur = (60 / s.bpm / 4) * 1000;
-    sNRef.current.forEach((midi, ni) => {
-      s.tracks.forEach((trk, ti) => {
-        if (trk.muted) return;
-        let pi = trk.curPat;
-        if (s.mode === 'song') {
-          const sl = Math.floor(absS / 16) % N_PAT;
-          const v  = s.song[sl]?.[ti];
-          if (v == null) return;
-          pi = v;
-        }
-        const sd = trk.pats[pi].steps[`${ni}_${absS % trk.pats[pi].len}`];
-        if (!sd) return;
-        const ch  = (trk.midiCh - 1) & 0x0F;
-        const vel = Math.min(127, Math.max(1, Math.round(sd.vel)));
-        const dur = sDur * (sd.len || 0.5) * 2;
-        out.send([0x90|ch, midi, vel], tMs);
-        out.send([0x80|ch, midi, 0],   tMs + dur);
+    const s=stRef.current, out=outRef.current;
+    if(!out)return;
+    const now=window.performance.now(), tMs=now+Math.max(0,(audioT-audioRef.current.currentTime)*1000);
+    const sDur=(60/s.bpm/4)*1000;
+    sNRef.current.forEach((midi,ni) => {
+      s.tracks.forEach((trk,ti) => {
+        if(trk.muted)return;
+        let pi=trk.curPat;
+        if(s.mode==='song'){const sl=Math.floor(absS/16)%N_PAT;const v=s.song[sl]?.[ti];if(v==null)return;pi=v;}
+        const sd=trk.pats[pi].steps[`${ni}_${absS%trk.pats[pi].len}`];
+        if(!sd)return;
+        const ch=(trk.midiCh-1)&0x0F, vel=Math.min(127,Math.max(1,Math.round(sd.vel)));
+        const dur=sDur*(sd.len||0.5)*2;
+        out.send([0x90|ch,midi,vel],tMs); out.send([0x80|ch,midi,0],tMs+dur);
       });
     });
   }
 
   const runSched = useCallback(() => {
-    const ctx = audioRef.current;
-    if (!ctx || !playRef.current) return;
-    const s = stRef.current, ahead = 0.1, sDur = 60 / s.bpm / 4;
-    while (timeRef.current < ctx.currentTime + ahead) {
-      const abs = stepRef.current;
-      schedStep(abs, timeRef.current);
-      const delay = Math.max(0, (timeRef.current - ctx.currentTime) * 1000);
-      const snap  = abs;
-      setTimeout(() => {
-        if (!playRef.current) return;
+    const ctx=audioRef.current;
+    if(!ctx||!playRef.current)return;
+    const s=stRef.current, ahead=0.1, sDur=60/s.bpm/4;
+    while(timeRef.current<ctx.currentTime+ahead){
+      const abs=stepRef.current;
+      schedStep(abs,timeRef.current);
+      const delay=Math.max(0,(timeRef.current-ctx.currentTime)*1000), snap=abs;
+      setTimeout(()=>{
+        if(!playRef.current)return;
         setAbsStep(snap);
-        if (stRef.current.mode === 'song') setCurSlot(Math.floor(snap/16) % N_PAT);
-      }, delay);
-      timeRef.current += sDur;
-      stepRef.current++;
+        if(stRef.current.mode==='song')setCurSlot(Math.floor(snap/16)%N_PAT);
+      },delay);
+      timeRef.current+=sDur; stepRef.current++;
     }
-    timerRef.current = setTimeout(runSched, 25);
-  }, []);
+    timerRef.current=setTimeout(runSched,25);
+  },[]);
 
   function startPlay() {
-    if (!audioRef.current) audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = audioRef.current;
-    if (ctx.state === 'suspended') ctx.resume();
-    playRef.current = true; stepRef.current = 0;
-    timeRef.current = ctx.currentTime + 0.05;
-    runSched();
-    set(s => ({...s, playing:true}));
+    if(!audioRef.current) audioRef.current=new(window.AudioContext||window.webkitAudioContext)();
+    const ctx=audioRef.current;
+    if(ctx.state==='suspended')ctx.resume();
+    playRef.current=true; stepRef.current=0;
+    timeRef.current=ctx.currentTime+0.05;
+    runSched(); set(s=>({...s,playing:true}));
   }
-
   function stopPlay() {
-    playRef.current = false;
-    clearTimeout(timerRef.current);
-    setAbsStep(-1); setCurSlot(-1);
-    set(s => ({...s, playing:false}));
-    if (outRef.current) stRef.current.tracks.forEach(t => {
-      outRef.current.send([0xB0|(t.midiCh-1)&0x0F, 123, 0]);
-    });
+    playRef.current=false; clearTimeout(timerRef.current);
+    setAbsStep(-1); setCurSlot(-1); set(s=>({...s,playing:false}));
+    if(outRef.current) stRef.current.tracks.forEach(t=>outRef.current.send([0xB0|(t.midiCh-1)&0x0F,123,0]));
   }
 
-  // Mode change with cleanup
-  const onModeChange = useCallback((mode) => {
-    set(s => ({...s, mode}));
-  }, []);
+  const onModeChange = useCallback(mode => set(s=>({...s,mode})), []);
 
-  // SEQ mode: brief 100ms preview (note on press only, auto Note Off)
+  // SEQ mode: brief 100ms preview, auto Note Off
   const previewNote = useCallback((ni, noteOn, vel) => {
-    const out = outRef.current;
-    if (!out) return;
-    const midi = sNRef.current[ni];
-    if (midi == null || midi < 12 || midi > 120) return;
-    const trk = stRef.current.tracks[stRef.current.selTrk];
-    const ch  = (trk.midiCh - 1) & 0x0F;
-    if (noteOn) {
-      out.send([0x90 | ch, midi, Math.min(127, Math.max(1, vel || 100))]);
-      // Brief 100ms auto-off — ignore the manual Note Off call
-      setTimeout(() => { if (out) out.send([0x80 | ch, midi, 0]); }, 100);
+    const out=outRef.current; if(!out)return;
+    const midi=sNRef.current[ni]; if(midi==null||midi<12||midi>120)return;
+    const trk=stRef.current.tracks[stRef.current.selTrk];
+    const ch=(trk.midiCh-1)&0x0F;
+    if(noteOn){
+      out.send([0x90|ch,midi,Math.min(127,Math.max(1,vel||100))]);
+      setTimeout(()=>{if(out)out.send([0x80|ch,midi,0]);},100);
     }
-    // noteOn=false is intentionally ignored — Note Off already auto-scheduled
-  }, []);
+  },[]);
 
-  // Inspiration catcher — record note + rebuild PAT 16
-  const recordInspiration = useCallback((ni) => {
+  // Inspiration catcher — rebuild PAT 16 with raw MIDI note data
+  // Also finds ni in scale if note is in scale (for SEQ playback)
+  const recordInspiration = useCallback((midi) => {
     const buf = inspBufRef.current;
-    buf.push({ ni });
-    if (buf.length > 128) buf.shift(); // rolling window
+    buf.push({ midi });
+    if (buf.length > 128) buf.shift();
 
     const ti       = stRef.current.selTrk;
+    const scale    = sNRef.current; // sorted MIDI note array
     const newSteps = {};
     buf.forEach((entry, idx) => {
-      newSteps[`${entry.ni}_${idx}`] = { vel: 100, len: 0.5 };
+      // Find the ni (scale index) for this MIDI note
+      // If not in scale, snap to nearest scale note
+      let ni = scale.indexOf(entry.midi);
+      if (ni < 0) {
+        // Find closest scale note
+        let closest = 0, minDist = Infinity;
+        scale.forEach((n, i) => { const d=Math.abs(n-entry.midi); if(d<minDist){minDist=d;closest=i;} });
+        ni = closest;
+      }
+      newSteps[`${ni}_${idx}`] = { vel: 100, len: 0.5 };
     });
 
     setInspCount(buf.length);
@@ -1144,51 +1125,45 @@ function App() {
     }));
   }, []);
 
-  // PLAY mode: Note On with inspiration recording
-  const playNoteOn = useCallback((ni) => {
-    const out = outRef.current;
-    if (!out) return;
-    const midi = sNRef.current[ni];
-    if (midi == null || midi < 12 || midi > 120) return;
-    const trk = stRef.current.tracks[stRef.current.selTrk];
-    const ch  = (trk.midiCh - 1) & 0x0F;
-    out.send([0x90 | ch, midi, 100]);
-    recordInspiration(ni);
-  }, [recordInspiration]);
+  // PLAY mode: Note On (raw MIDI) + record to inspiration
+  const playMidiOn = useCallback((midi) => {
+    const out=outRef.current; if(!out)return;
+    if(midi<0||midi>127)return;
+    const trk=stRef.current.tracks[stRef.current.selTrk];
+    const ch=(trk.midiCh-1)&0x0F;
+    out.send([0x90|ch,midi,100]);
+    recordInspiration(midi);
+  },[recordInspiration]);
 
-  // PLAY mode: Note Off (sustain release)
-  const playNoteOff = useCallback((ni) => {
-    const out = outRef.current;
-    if (!out) return;
-    const midi = sNRef.current[ni];
-    if (midi == null || midi < 12 || midi > 120) return;
-    const trk = stRef.current.tracks[stRef.current.selTrk];
-    const ch  = (trk.midiCh - 1) & 0x0F;
-    out.send([0x80 | ch, midi, 0]);
-  }, []);
+  // PLAY mode: Note Off (raw MIDI)
+  const playMidiOff = useCallback((midi) => {
+    const out=outRef.current; if(!out)return;
+    if(midi<0||midi>127)return;
+    const trk=stRef.current.tracks[stRef.current.selTrk];
+    const ch=(trk.midiCh-1)&0x0F;
+    out.send([0x80|ch,midi,0]);
+  },[]);
 
   // Mutators
-  const togStep  = useCallback((ti,ni,step) => set(s => {
-    const t=s.tracks[ti], p=t.pats[t.curPat], k=`${ni}_${step}`, ns={...p.steps};
-    if(ns[k]) delete ns[k]; else ns[k]={vel:100,len:0.5};
+  const togStep = useCallback((ti,ni,step)=>set(s=>{
+    const t=s.tracks[ti],p=t.pats[t.curPat],k=`${ni}_${step}`,ns={...p.steps};
+    if(ns[k])delete ns[k];else ns[k]={vel:100,len:0.5};
     return{...s,tracks:s.tracks.map((tr,i)=>i!==ti?tr:{...tr,pats:tr.pats.map((pp,j)=>j!==tr.curPat?pp:{...pp,steps:ns})})};
   }),[]);
-
-  const updStep  = useCallback((ti,ni,step,d) => set(s => {
-    const t=s.tracks[ti], p=t.pats[t.curPat], k=`${ni}_${step}`;
-    if(!p.steps[k]) return s;
+  const updStep = useCallback((ti,ni,step,d)=>set(s=>{
+    const t=s.tracks[ti],p=t.pats[t.curPat],k=`${ni}_${step}`;
+    if(!p.steps[k])return s;
     const ns={...p.steps,[k]:{...p.steps[k],...d}};
     return{...s,tracks:s.tracks.map((tr,i)=>i!==ti?tr:{...tr,pats:tr.pats.map((pp,j)=>j!==tr.curPat?pp:{...pp,steps:ns})})};
   }),[]);
-
-  const scrollY  = useCallback((ti,d)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,yOff:Math.max(0,t.yOff+d)})})),[]);
-  const scrollX  = useCallback((ti,d)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,xOff:Math.max(0,Math.min(7,t.xOff+d))})})),[]);
-  const selPat   = useCallback((ti,pi)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,curPat:pi})})),[]);
-  const selTrk   = useCallback(i=>set(s=>({...s,selTrk:i})),[]);
-  const togMute  = useCallback(i=>set(s=>({...s,tracks:s.tracks.map((t,j)=>j!==i?t:{...t,muted:!t.muted})})),[]);
-  const setCh    = useCallback((i,ch)=>set(s=>({...s,tracks:s.tracks.map((t,j)=>j!==i?t:{...t,midiCh:ch})})),[]);
-  const setLen   = useCallback((ti,l)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,pats:t.pats.map((p,j)=>j!==t.curPat?p:{...p,len:l})})})),[]);
-  const clrPat   = useCallback(ti=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,pats:t.pats.map((p,j)=>j!==t.curPat?p:{...p,steps:{}})})})),[]);
+  const scrollY = useCallback((ti,d)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,yOff:Math.max(0,t.yOff+d)})})),[]);
+  const scrollX = useCallback((ti,d)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,xOff:Math.max(0,Math.min(7,t.xOff+d))})})),[]);
+  const selPat  = useCallback((ti,pi)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,curPat:pi})})),[]);
+  const selTrk  = useCallback(i=>set(s=>({...s,selTrk:i})),[]);
+  const togMute = useCallback(i=>set(s=>({...s,tracks:s.tracks.map((t,j)=>j!==i?t:{...t,muted:!t.muted})})),[]);
+  const setCh   = useCallback((i,ch)=>set(s=>({...s,tracks:s.tracks.map((t,j)=>j!==i?t:{...t,midiCh:ch})})),[]);
+  const setLen  = useCallback((ti,l)=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,pats:t.pats.map((p,j)=>j!==t.curPat?p:{...p,len:l})})})),[]);
+  const clrPat  = useCallback(ti=>set(s=>({...s,tracks:s.tracks.map((t,i)=>i!==ti?t:{...t,pats:t.pats.map((p,j)=>j!==t.curPat?p:{...p,steps:{}})})})),[]);
 
   const trk = st.tracks[st.selTrk];
 
@@ -1198,7 +1173,7 @@ function App() {
         onModeChange={onModeChange}
         midiOuts={midiOuts} selOut={selOut} setSel={setSelOut} midiOk={midiOk}/>
       <div className="main">
-        {st.mode === 'seq' && <>
+        {st.mode==='seq'&&<>
           <TrkPanel tracks={st.tracks} sel={st.selTrk} onSel={selTrk} onMute={togMute} onCh={setCh}/>
           <SeqGrid key={st.selTrk}
             track={trk} trkIdx={st.selTrk} root={st.root} scale={st.scale}
@@ -1208,15 +1183,15 @@ function App() {
             onPatSel={selPat} onPatLen={setLen} onClear={clrPat}
             onPreview={previewNote}/>
         </>}
-        {st.mode === 'song' && <SongView st={st} set={set} curSlot={curSlot}/>}
-        {st.mode === 'play' && <>
+        {st.mode==='song'&&<SongView st={st} set={set} curSlot={curSlot}/>}
+        {st.mode==='play'&&<>
           <TrkPanel tracks={st.tracks} sel={st.selTrk} onSel={selTrk} onMute={togMute} onCh={setCh}/>
           <PlayView
             selTrk={st.selTrk}
             root={st.root}
             scale={st.scale}
-            onNoteOn={playNoteOn}
-            onNoteOff={playNoteOff}
+            onMidiOn={playMidiOn}
+            onMidiOff={playMidiOff}
             inspCount={inspCount}/>
         </>}
       </div>
