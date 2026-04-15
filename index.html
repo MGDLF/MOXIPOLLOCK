@@ -381,7 +381,7 @@ function TrkPanel({tracks, sel, onSel, onMute, onCh}) {
 // SEQUENCER GRID
 // ═══════════════════════════════════════════════════════
 function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpdate,
-                  onScrollY, onScrollX, onPatSel, onPatLen, onClear}) {
+                  onScrollY, onScrollX, onPatSel, onPatLen, onClear, onPreview}) {
   const c      = TCOLORS[trkIdx];
   const [liveDrag, setLiveDrag] = useState(null); // {ni,step,vel} during drag
 
@@ -391,7 +391,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
   const patRef   = useRef(track.pats[track.curPat]); // current pattern
 
   // Keep refs fresh on every render
-  useEffect(() => { hRef.current = { onToggle, onUpdate, trkIdx }; });
+  useEffect(() => { hRef.current = { onToggle, onUpdate, trkIdx, onPreview }; });
   const pat = track.pats[track.curPat];
   useEffect(() => { patRef.current = pat; }, [pat]);
 
@@ -439,12 +439,15 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
       const p  = patRef.current;
       const k  = `${ni}_${step}`;
       const sd = p.steps[k];
+      const vel = sd ? sd.vel : 100;
       ds = { ni, step, k, touchId,
              startY:   clientY,
-             startVel: sd ? sd.vel : 100,
+             startVel: vel,
              liveVel:  null,
              wasActive: !!sd,
              dragging:  false };
+      // Immediately sound the note — live MIDI controller behaviour
+      hRef.current.onPreview(ni, true, vel);
     }
 
     function pressMove(clientY, touchId) {
@@ -464,7 +467,9 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
 
     function pressEnd(touchId) {
       if (!ds || ds.touchId !== touchId) return;
-      const { onToggle, onUpdate, trkIdx } = hRef.current;
+      const { onToggle, onUpdate, onPreview, trkIdx } = hRef.current;
+      // Always release the note first — held note ends on finger-up
+      onPreview(ds.ni, false, 0);
       if (!ds.dragging) {
         onToggle(trkIdx, ds.ni, ds.step);
       } else if (ds.wasActive && ds.liveVel !== null) {
@@ -474,7 +479,12 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
       setLiveDrag(null);
     }
 
-    function pressCancel() { ds = null; setLiveDrag(null); }
+    function pressCancel() {
+      // Release any held note before cancelling
+      if (ds) hRef.current.onPreview(ds.ni, false, 0);
+      ds = null;
+      setLiveDrag(null);
+    }
 
     // ── TOUCH handlers (native, passive:false = real preventDefault on iOS) ──
     function onTouchStart(e) {
@@ -837,6 +847,21 @@ function App() {
     });
   }
 
+  // Live MIDI preview — fires on every cell press/release (MIDI controller mode)
+  const previewNote = useCallback((ni, noteOn, vel) => {
+    const out = outRef.current;
+    if (!out) return;
+    const midi = sNRef.current[ni];
+    if (midi == null || midi < 12 || midi > 120) return;
+    const trk = stRef.current.tracks[stRef.current.selTrk];
+    const ch  = (trk.midiCh - 1) & 0x0F;
+    if (noteOn) {
+      out.send([0x90 | ch, midi, Math.min(127, Math.max(1, vel || 100))]);
+    } else {
+      out.send([0x80 | ch, midi, 0]);
+    }
+  }, []);
+
   // Mutators
   const togStep  = useCallback((ti,ni,step) => set(s => {
     const t=s.tracks[ti], p=t.pats[t.curPat], k=`${ni}_${step}`, ns={...p.steps};
@@ -874,7 +899,8 @@ function App() {
             absStep={absStep} playing={st.playing}
             onToggle={togStep} onUpdate={updStep}
             onScrollY={scrollY} onScrollX={scrollX}
-            onPatSel={selPat} onPatLen={setLen} onClear={clrPat}/>
+            onPatSel={selPat} onPatLen={setLen} onClear={clrPat}
+            onPreview={previewNote}/>
         </>}
         {st.mode === 'song' && <SongView st={st} set={set} curSlot={curSlot}/>}
       </div>
