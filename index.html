@@ -44,6 +44,7 @@
     }
     button.mbtn:hover:not(.on) { border-color: var(--tx); color: var(--tx2); }
     button.mbtn.on { background: var(--acc); border-color: var(--acc); color: #000; font-weight: bold; }
+    button.mbtn.play-on { background: #7c4dff; border-color: #7c4dff; color: #fff; font-weight: bold; }
     button.play {
       padding: 4px 18px; border: 1px solid var(--bd2); background: transparent;
       color: var(--tx); font-size: 17px; cursor: pointer; border-radius: 3px;
@@ -120,14 +121,13 @@
     .pbtn:hover { border-color: var(--bd2); color: var(--tx); }
     .pbtn.cur { border-color: var(--tc); color: var(--tc); background: var(--bg3); }
     .pbtn.has { background: var(--bg3); color: var(--tx); }
+    .pbtn.insp { opacity: .5; font-style: italic; }
 
     /* ── GRID ── */
     .gwrap {
       display: flex; flex: 1; overflow: hidden; min-height: 0;
       background: var(--bg1); border: 1px solid var(--bd); border-radius: 3px;
-      position: relative;
-      /* touch-action handled entirely by native JS to prevent iOS gesture conflicts */
-      touch-action: none;
+      position: relative; touch-action: none;
     }
     .ncol {
       width: 38px; flex-shrink: 0; border-right: 1px solid var(--bd);
@@ -154,15 +154,12 @@
     /* CELLS */
     .cell {
       border-radius: 2px; position: relative; overflow: hidden;
-      border: 1px solid transparent; min-height: 0;
-      /* pointer-events off so elementFromPoint hits the cell, not children */
-      cursor: pointer;
+      border: 1px solid transparent; min-height: 0; cursor: pointer;
     }
     .cell.off { background: var(--bg2); border-color: var(--bd); }
     .cell.ph  { border-color: rgba(255,255,255,.22) !important; }
     .cell.off.ph { background: rgba(255,255,255,.03); }
     .cell.drag-active { outline: 2px solid rgba(255,255,255,.5); outline-offset: -1px; z-index: 2; }
-    /* All children non-interactive so touch hit-testing lands on cell */
     .cell > * { pointer-events: none; }
     .vbar {
       position: absolute; bottom: 0; left: 0; height: 3px;
@@ -231,6 +228,48 @@
     .sng-cell:not(.filled):hover { background: rgba(255,255,255,.03); }
     .sng-cell.slot { outline: 1px solid rgba(255,255,255,.28); outline-offset: -1px; }
     .sng-tip   { font-size: 9px; color: var(--tx3); flex-shrink: 0; }
+
+    /* ── PLAY MODE ── */
+    .play-area {
+      display: flex; flex-direction: column; flex: 1;
+      overflow: hidden; padding: 6px 8px 6px; gap: 6px; min-width: 0;
+    }
+    .play-nav {
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap;
+    }
+    .play-pads {
+      display: flex; flex-direction: column; flex: 1; gap: 3px; overflow: hidden;
+      touch-action: none;
+    }
+    .pad {
+      flex: 1; display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid var(--bd2); border-radius: 4px; padding: 0 14px;
+      cursor: pointer; min-height: 0; position: relative; overflow: hidden;
+      touch-action: none;
+    }
+    .pad > * { pointer-events: none; }
+    .pad-glow {
+      position: absolute; inset: 0; opacity: 0;
+      transition: opacity .06s;
+    }
+    .pad-glow.on { opacity: 1; }
+    .pad-left { display: flex; align-items: center; gap: 10px; z-index: 1; }
+    .pad-note { font-size: 15px; font-weight: bold; letter-spacing: 1px; }
+    .pad-root-badge {
+      font-size: 7px; letter-spacing: 2px; padding: 1px 5px;
+      border-radius: 2px; border: 1px solid;
+    }
+    .pad-midi { font-size: 10px; color: var(--tx3); z-index: 1; }
+    .insp-bar {
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 2px 0;
+    }
+    .insp-track {
+      flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden;
+    }
+    .insp-fill {
+      height: 100%; border-radius: 3px; transition: width .15s;
+    }
+    .insp-label { font-size: 9px; color: var(--tx3); white-space: nowrap; min-width: 110px; }
   </style>
 </head>
 <body>
@@ -268,6 +307,7 @@ const TCOLORS = [
   {hex:'#ff9100',rgb:'255,145,0'},
 ];
 const N_TRK = 8, N_PAT = 16, ROWS = 8, COLS = 16;
+const INSP_PAT = 15; // PAT 16 = index 15
 
 // ═══════════════════════════════════════════════════════
 // UTILITIES
@@ -293,19 +333,22 @@ function mkState()  {
            song:Array.from({length:N_PAT},()=>Array(N_TRK).fill(null)) };
 }
 function hasNotes(p) { return Object.keys(p.steps).length > 0; }
-// vel 1→15% opacity, vel 127→100% opacity
 function velAlpha(v) { return 0.15 + (v / 127) * 0.85; }
 
 // ═══════════════════════════════════════════════════════
 // HEADER
 // ═══════════════════════════════════════════════════════
-function Header({st, set, onPlay, onStop, midiOuts, selOut, setSel, midiOk}) {
+function Header({st, set, onPlay, onStop, onModeChange, midiOuts, selOut, setSel, midiOk}) {
   return (
     <div className="hdr">
       <div className="logo">MOXI</div>
       <div className="cg">
-        <button className={`mbtn ${st.mode==='seq'?'on':''}`}  onClick={()=>set(s=>({...s,mode:'seq'}))}>SEQ</button>
-        <button className={`mbtn ${st.mode==='song'?'on':''}`} onClick={()=>set(s=>({...s,mode:'song'}))}>SONG</button>
+        <button className={`mbtn ${st.mode==='seq'?'on':''}`}
+          onClick={()=>onModeChange('seq')}>SEQ</button>
+        <button className={`mbtn ${st.mode==='song'?'on':''}`}
+          onClick={()=>onModeChange('song')}>SONG</button>
+        <button className={`mbtn ${st.mode==='play'?'play-on':''}`}
+          onClick={()=>onModeChange('play')}>PLAY</button>
       </div>
       <div className="sep"/>
       <div className="cg">
@@ -383,14 +426,12 @@ function TrkPanel({tracks, sel, onSel, onMute, onCh}) {
 function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpdate,
                   onScrollY, onScrollX, onPatSel, onPatLen, onClear, onPreview}) {
   const c      = TCOLORS[trkIdx];
-  const [liveDrag, setLiveDrag] = useState(null); // {ni,step,vel} during drag
+  const [liveDrag, setLiveDrag] = useState(null);
 
-  // Refs so native event closures always see current values
-  const gridRef  = useRef(null);   // the .gwrap DOM node
-  const hRef     = useRef({});     // fresh callbacks
-  const patRef   = useRef(track.pats[track.curPat]); // current pattern
+  const gridRef  = useRef(null);
+  const hRef     = useRef({});
+  const patRef   = useRef(track.pats[track.curPat]);
 
-  // Keep refs fresh on every render
   useEffect(() => { hRef.current = { onToggle, onUpdate, trkIdx, onPreview }; });
   const pat = track.pats[track.curPat];
   useEffect(() => { patRef.current = pat; }, [pat]);
@@ -409,21 +450,12 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
   const patStep = playing && absStep >= 0 ? absStep % pat.len : -1;
   const playCol = patStep >= 0 ? patStep - xStart : -1;
 
-  // ─────────────────────────────────────────────────────
-  // NATIVE INTERACTION ENGINE
-  // Attached directly to .gwrap so e.preventDefault() is
-  // a real native call — the only way to suppress iOS
-  // gesture recognizers reliably.
-  // ─────────────────────────────────────────────────────
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
 
-    // Mutable drag state (not React state — avoids stale closures)
     let ds = null;
-    // {ni, step, touchId, startY, startVel, wasActive, dragging, liveVel}
 
-    // Walk up from the hit element to find our data-ni cell
     function findCell(x, y) {
       let el = document.elementFromPoint(x, y);
       while (el && el !== grid) {
@@ -441,18 +473,14 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
       const sd = p.steps[k];
       const vel = sd ? sd.vel : 100;
       ds = { ni, step, k, touchId,
-             startY:   clientY,
-             startVel: vel,
-             liveVel:  null,
-             wasActive: !!sd,
-             dragging:  false };
-      // Immediately sound the note — live MIDI controller behaviour
+             startY: clientY, startVel: vel,
+             liveVel: null, wasActive: !!sd, dragging: false };
       hRef.current.onPreview(ni, true, vel);
     }
 
     function pressMove(clientY, touchId) {
       if (!ds || ds.touchId !== touchId) return;
-      const dy = ds.startY - clientY;  // positive = moved UP = more velocity
+      const dy = ds.startY - clientY;
       if (Math.abs(dy) > 8) {
         ds.dragging = true;
         if (ds.wasActive) {
@@ -467,9 +495,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
 
     function pressEnd(touchId) {
       if (!ds || ds.touchId !== touchId) return;
-      const { onToggle, onUpdate, onPreview, trkIdx } = hRef.current;
-      // Always release the note first — held note ends on finger-up
-      onPreview(ds.ni, false, 0);
+      const { onToggle, onUpdate, trkIdx } = hRef.current;
       if (!ds.dragging) {
         onToggle(trkIdx, ds.ni, ds.step);
       } else if (ds.wasActive && ds.liveVel !== null) {
@@ -480,25 +506,21 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
     }
 
     function pressCancel() {
-      // Release any held note before cancelling
-      if (ds) hRef.current.onPreview(ds.ni, false, 0);
       ds = null;
       setLiveDrag(null);
     }
 
-    // ── TOUCH handlers (native, passive:false = real preventDefault on iOS) ──
     function onTouchStart(e) {
-      if (ds) return; // already tracking a touch — ignore extra fingers
+      if (ds) return;
       const t    = e.touches[0];
       const cell = findCell(t.clientX, t.clientY);
       if (!cell) return;
-      e.preventDefault(); // ← real native call: kills iOS scroll/zoom recognizer
+      e.preventDefault();
       pressStart(cell.ni, cell.step, t.clientY, t.identifier);
     }
 
     function onTouchMove(e) {
       if (!ds) return;
-      // Find the tracked touch among changed touches
       let tracked = null;
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === ds.touchId) {
@@ -506,7 +528,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
         }
       }
       if (!tracked) return;
-      e.preventDefault(); // prevent iOS scroll while dragging for velocity
+      e.preventDefault();
       pressMove(tracked.clientY, tracked.identifier);
     }
 
@@ -521,9 +543,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
 
     function onTouchCancel() { pressCancel(); }
 
-    // ── MOUSE handlers (desktop) ──
     const MOUSE_ID = -1;
-
     function onMouseDown(e) {
       if (e.button !== 0) return;
       const cell = findCell(e.clientX, e.clientY);
@@ -533,12 +553,10 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
     function onMouseMove(e) { pressMove(e.clientY, MOUSE_ID); }
     function onMouseUp()    { if (ds && ds.touchId === MOUSE_ID) pressEnd(MOUSE_ID); }
 
-    // Touch: attach to grid (so preventDefault is on the right target)
     grid.addEventListener('touchstart',  onTouchStart, { passive: false });
     grid.addEventListener('touchmove',   onTouchMove,  { passive: false });
     grid.addEventListener('touchend',    onTouchEnd);
     grid.addEventListener('touchcancel', onTouchCancel);
-    // Mouse: mousedown on grid, move/up on window (cursor can leave grid)
     grid.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup',   onMouseUp);
@@ -552,7 +570,7 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup',   onMouseUp);
     };
-  }, []); // empty deps — all live values accessed via refs
+  }, []);
 
   const gridCols = { gridTemplateColumns: `repeat(${COLS},1fr)` };
 
@@ -563,8 +581,9 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
         <span className="lbl" style={{color:c.hex,marginRight:3}}>PAT</span>
         {track.pats.map((p,i) => (
           <button key={i}
-            className={`pbtn ${i===track.curPat?'cur':''} ${hasNotes(p)&&i!==track.curPat?'has':''}`}
+            className={`pbtn ${i===track.curPat?'cur':''} ${hasNotes(p)&&i!==track.curPat?'has':''} ${i===INSP_PAT?'insp':''}`}
             style={i===track.curPat?{'--tc':c.hex,borderColor:c.hex,color:c.hex}:{}}
+            title={i===INSP_PAT?'PAT 16 = INSP (auto-filled in PLAY mode)':undefined}
             onClick={()=>onPatSel(trkIdx,i)}>{i+1}</button>
         ))}
         <div style={{flex:1}}/>
@@ -586,7 +605,6 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
 
         {/* Grid body */}
         <div className="gbody">
-          {/* Step numbers */}
           <div className="snums" style={gridCols}>
             {steps.map((s,col) => (
               <div key={s} className={`snum ${s%4===0?'bar':''} ${col===playCol?'now':''}`}>
@@ -595,7 +613,6 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
             ))}
           </div>
 
-          {/* Cell rows — data-ni & data-step drive hit-testing in native handlers */}
           <div className="grows">
             {rows.map(({r,ni}) => (
               <div key={r} className="grow" style={gridCols}>
@@ -618,17 +635,14 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
                         boxShadow:  `0 0 ${3+alpha*7}px rgba(${c.rgb},${alpha*.55})`,
                       } : {}}
                     >
-                      {/* Velocity bar at bottom */}
                       {(isOn||isDrag) && dv!=null && (
                         <div className="vbar" style={{width:`${dv/127*100}%`, background:c.hex, opacity:.75}}/>
                       )}
-                      {/* Live velocity number during drag */}
                       {isDrag && (
                         <div className="vcap" style={{color: alpha>0.55 ? 'rgba(0,0,0,.85)' : '#fff'}}>
                           {liveDrag.vel}
                         </div>
                       )}
-                      {/* Subtle up/down hint arrows on active cells */}
                       {isOn && !isDrag && !liveDrag && (
                         <>
                           <div className="darr up" style={{color:`rgba(${c.rgb},.5)`}}>▲</div>
@@ -643,7 +657,6 @@ function SeqGrid({track, trkIdx, root, scale, absStep, playing, onToggle, onUpda
           </div>
         </div>
 
-        {/* Floating velocity HUD */}
         {liveDrag && (
           <div className="vel-hud" style={{borderColor:c.hex, color:c.hex}}>
             VEL {liveDrag.vel}
@@ -742,6 +755,230 @@ function SongView({st, set, curSlot}) {
 }
 
 // ═══════════════════════════════════════════════════════
+// PLAY VIEW — polyphonic MIDI controller with inspiration catcher
+// ═══════════════════════════════════════════════════════
+function PlayView({selTrk, root, scale, onNoteOn, onNoteOff, inspCount}) {
+  const c = TCOLORS[selTrk];
+  const sNotes = useMemo(() => buildScale(root, scale), [root, scale]);
+  const maxY   = Math.max(0, sNotes.length - 8);
+
+  // Start near middle of the scale range
+  const [yOff, setYOff] = useState(() => Math.max(0, Math.floor(sNotes.length / 2) - 4));
+
+  // Active pads (Set of ni values currently pressed)
+  const [activePads, setActivePads] = useState(() => new Set());
+
+  const wrapRef  = useRef(null);
+  const hRef     = useRef({});
+  // Map from touchId → ni currently pressed by that touch
+  const touchMap = useRef(new Map());
+
+  // Keep callbacks fresh without re-registering native listeners
+  useEffect(() => { hRef.current = { onNoteOn, onNoteOff }; });
+
+  // Visible pads: top of list = highest note, bottom = lowest
+  const visPads = useMemo(() => {
+    return Array.from({length: 8}, (_, r) => {
+      const ni   = yOff + (7 - r);
+      const midi = sNotes[ni] ?? null;
+      return { r, ni, midi, isRoot: midi != null && (midi % 12) === root };
+    });
+  }, [yOff, sNotes, root]);
+
+  // Native multi-touch engine
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+
+    function findPad(x, y) {
+      let el = document.elementFromPoint(x, y);
+      while (el && el !== wrap) {
+        if (el.dataset && el.dataset.ni !== undefined) return +el.dataset.ni;
+        el = el.parentElement;
+      }
+      return null;
+    }
+
+    function onTouchStart(e) {
+      e.preventDefault();
+      const map  = touchMap.current;
+      const added = [];
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (map.size >= 5) break; // max 5 simultaneous
+        const t  = e.changedTouches[i];
+        if (map.has(t.identifier)) continue;
+        const ni = findPad(t.clientX, t.clientY);
+        if (ni == null) continue;
+        map.set(t.identifier, ni);
+        added.push(ni);
+        hRef.current.onNoteOn(ni);
+      }
+      if (added.length) setActivePads(new Set(map.values()));
+    }
+
+    function onTouchMove(e) {
+      e.preventDefault();
+      const map     = touchMap.current;
+      let   changed = false;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (!map.has(t.identifier)) continue;
+        const oldNi = map.get(t.identifier);
+        const newNi = findPad(t.clientX, t.clientY);
+        if (newNi == null || newNi === oldNi) continue;
+        // Glide: Note Off old → Note On new
+        // Only send Note Off if no other finger is holding oldNi
+        const otherHoldsOld = [...map.entries()]
+          .some(([id, n]) => id !== t.identifier && n === oldNi);
+        if (!otherHoldsOld) hRef.current.onNoteOff(oldNi);
+        map.set(t.identifier, newNi);
+        hRef.current.onNoteOn(newNi);
+        changed = true;
+      }
+      if (changed) setActivePads(new Set(map.values()));
+    }
+
+    function onTouchEnd(e) {
+      const map = touchMap.current;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (!map.has(t.identifier)) continue;
+        const ni = map.get(t.identifier);
+        map.delete(t.identifier);
+        const stillHeld = [...map.values()].includes(ni);
+        if (!stillHeld) hRef.current.onNoteOff(ni);
+      }
+      setActivePads(new Set(map.values()));
+    }
+
+    function onTouchCancel(e) { onTouchEnd(e); }
+
+    // Mouse support (desktop)
+    let mouseNi = null;
+    function onMouseDown(e) {
+      if (e.button !== 0) return;
+      const ni = findPad(e.clientX, e.clientY);
+      if (ni == null) return;
+      mouseNi = ni;
+      setActivePads(new Set([ni]));
+      hRef.current.onNoteOn(ni);
+    }
+    function onMouseMove(e) {
+      if (mouseNi == null) return;
+      const ni = findPad(e.clientX, e.clientY);
+      if (ni == null || ni === mouseNi) return;
+      hRef.current.onNoteOff(mouseNi);
+      mouseNi = ni;
+      setActivePads(new Set([ni]));
+      hRef.current.onNoteOn(ni);
+    }
+    function onMouseUp() {
+      if (mouseNi != null) {
+        hRef.current.onNoteOff(mouseNi);
+        mouseNi = null;
+        setActivePads(new Set());
+      }
+    }
+
+    wrap.addEventListener('touchstart',  onTouchStart,  { passive: false });
+    wrap.addEventListener('touchmove',   onTouchMove,   { passive: false });
+    wrap.addEventListener('touchend',    onTouchEnd);
+    wrap.addEventListener('touchcancel', onTouchCancel);
+    wrap.addEventListener('mousedown',   onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup',   onMouseUp);
+
+    return () => {
+      wrap.removeEventListener('touchstart',  onTouchStart);
+      wrap.removeEventListener('touchmove',   onTouchMove);
+      wrap.removeEventListener('touchend',    onTouchEnd);
+      wrap.removeEventListener('touchcancel', onTouchCancel);
+      wrap.removeEventListener('mousedown',   onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup',   onMouseUp);
+      touchMap.current.clear();
+    };
+  }, []);
+
+  const fillPct = Math.round((inspCount / 128) * 100);
+
+  return (
+    <div className="play-area">
+      {/* Top nav bar */}
+      <div className="play-nav">
+        <span style={{fontSize:10,fontWeight:'bold',color:'#7c4dff',letterSpacing:3}}>PLAY</span>
+        <div className="sep"/>
+        <span className="lbl">OCT</span>
+        <button className="scbtn" onClick={()=>setYOff(v=>Math.min(maxY,v+8))} disabled={yOff+8>maxY}>▲</button>
+        <button className="scbtn" onClick={()=>setYOff(v=>Math.max(0,v-8))}    disabled={yOff<=0}>▼</button>
+        <span className="lbl" style={{fontSize:9}}>
+          {midiLabel(sNotes[yOff])}–{midiLabel(sNotes[Math.min(yOff+7,sNotes.length-1)])}
+        </span>
+        <div style={{flex:1}}/>
+        <span className="lbl" style={{color:'var(--tx3)'}}>
+          tap = burst · hold = sustain · drag = glide · up to 5 voices
+        </span>
+        <span style={{fontSize:9,color:'var(--tx3)',letterSpacing:'0.5px',whiteSpace:'nowrap',marginLeft:8}}>MOXI by Mexipollock</span>
+      </div>
+
+      {/* Pad grid */}
+      <div className="play-pads" ref={wrapRef} onContextMenu={e=>e.preventDefault()}>
+        {visPads.map(({r, ni, midi, isRoot}) => {
+          const isActive = activePads.has(ni);
+          const glowAlpha = isActive ? 0.75 : isRoot ? 0.1 : 0.03;
+          return (
+            <div key={r} className="pad"
+              data-ni={ni}
+              style={{
+                borderColor: isActive ? c.hex : isRoot ? `rgba(${c.rgb},.35)` : 'var(--bd2)',
+                boxShadow:   isActive ? `0 0 18px rgba(${c.rgb},.45), inset 0 0 20px rgba(${c.rgb},.12)` : 'none',
+              }}
+            >
+              {/* Background glow */}
+              <div className={`pad-glow ${isActive?'on':''}`}
+                style={{background:`rgba(${c.rgb},${glowAlpha})`}}/>
+              {/* Left: note name + root badge */}
+              <div className="pad-left">
+                <div className="pad-note"
+                  style={{color: isActive ? '#fff' : isRoot ? c.hex : 'var(--tx2)'}}>
+                  {midiLabel(midi)}
+                </div>
+                {isRoot && (
+                  <div className="pad-root-badge"
+                    style={{color: isActive ? 'rgba(255,255,255,.8)' : c.hex,
+                            borderColor: isActive ? 'rgba(255,255,255,.4)' : `rgba(${c.rgb},.5)`}}>
+                    ROOT
+                  </div>
+                )}
+              </div>
+              {/* Right: MIDI note number */}
+              <div className="pad-midi"
+                style={{color: isActive ? 'rgba(255,255,255,.5)' : 'var(--tx3)'}}>
+                {midi != null ? `#${midi}` : ''}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Inspiration catcher bar */}
+      <div className="insp-bar">
+        <span className="lbl" style={{color:'#7c4dff',fontSize:9,letterSpacing:2}}>INSP</span>
+        <div className="insp-track">
+          <div className="insp-fill" style={{width:`${fillPct}%`, background:'#7c4dff'}}/>
+        </div>
+        <span className="insp-label">
+          {inspCount} / 128 notes → PAT 16
+        </span>
+        {inspCount > 0 && (
+          <span className="lbl" style={{color:'#7c4dff'}}>●</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // APP
 // ═══════════════════════════════════════════════════════
 function App() {
@@ -751,21 +988,36 @@ function App() {
   const [midiOuts, setMidiOuts] = useState([]);
   const [selOut,   setSelOut]   = useState('');
   const [midiOk,   setMidiOk]   = useState(false);
+  const [inspCount, setInspCount] = useState(0);
 
-  const audioRef  = useRef(null);
-  const midiRef   = useRef(null);
-  const outRef    = useRef(null);
-  const timerRef  = useRef(null);
-  const stepRef   = useRef(0);
-  const timeRef   = useRef(0);
-  const playRef   = useRef(false);
-  const stRef     = useRef(st);
-  const sNRef     = useRef([]);
+  const audioRef   = useRef(null);
+  const midiRef    = useRef(null);
+  const outRef     = useRef(null);
+  const timerRef   = useRef(null);
+  const stepRef    = useRef(0);
+  const timeRef    = useRef(0);
+  const playRef    = useRef(false);
+  const stRef      = useRef(st);
+  const sNRef      = useRef([]);
+  const inspBufRef = useRef([]); // rolling buffer: [{ni}, ...] max 128
+  const prevModeRef = useRef('seq');
 
   useEffect(() => { stRef.current = st; sNRef.current = buildScale(st.root, st.scale); }, [st]);
   useEffect(() => {
     if (midiRef.current) outRef.current = midiRef.current.outputs.get(selOut) || null;
   }, [selOut]);
+
+  // All-notes-off when leaving PLAY mode
+  useEffect(() => {
+    if (prevModeRef.current === 'play' && st.mode !== 'play') {
+      if (outRef.current) {
+        stRef.current.tracks.forEach(t => {
+          outRef.current.send([0xB0 | ((t.midiCh - 1) & 0x0F), 123, 0]);
+        });
+      }
+    }
+    prevModeRef.current = st.mode;
+  }, [st.mode]);
 
   // MIDI init
   useEffect(() => {
@@ -783,8 +1035,8 @@ function App() {
   function schedStep(absS, audioT) {
     const s = stRef.current, out = outRef.current;
     if (!out) return;
-    const now = window.performance.now();
-    const tMs = now + Math.max(0, (audioT - audioRef.current.currentTime) * 1000);
+    const now  = window.performance.now();
+    const tMs  = now + Math.max(0, (audioT - audioRef.current.currentTime) * 1000);
     const sDur = (60 / s.bpm / 4) * 1000;
     sNRef.current.forEach((midi, ni) => {
       s.tracks.forEach((trk, ti) => {
@@ -847,7 +1099,12 @@ function App() {
     });
   }
 
-  // Live MIDI preview — fires on every cell press/release (MIDI controller mode)
+  // Mode change with cleanup
+  const onModeChange = useCallback((mode) => {
+    set(s => ({...s, mode}));
+  }, []);
+
+  // SEQ mode: brief 100ms preview (note on press only, auto Note Off)
   const previewNote = useCallback((ni, noteOn, vel) => {
     const out = outRef.current;
     if (!out) return;
@@ -857,9 +1114,57 @@ function App() {
     const ch  = (trk.midiCh - 1) & 0x0F;
     if (noteOn) {
       out.send([0x90 | ch, midi, Math.min(127, Math.max(1, vel || 100))]);
-    } else {
-      out.send([0x80 | ch, midi, 0]);
+      // Brief 100ms auto-off — ignore the manual Note Off call
+      setTimeout(() => { if (out) out.send([0x80 | ch, midi, 0]); }, 100);
     }
+    // noteOn=false is intentionally ignored — Note Off already auto-scheduled
+  }, []);
+
+  // Inspiration catcher — record note + rebuild PAT 16
+  const recordInspiration = useCallback((ni) => {
+    const buf = inspBufRef.current;
+    buf.push({ ni });
+    if (buf.length > 128) buf.shift(); // rolling window
+
+    const ti       = stRef.current.selTrk;
+    const newSteps = {};
+    buf.forEach((entry, idx) => {
+      newSteps[`${entry.ni}_${idx}`] = { vel: 100, len: 0.5 };
+    });
+
+    setInspCount(buf.length);
+    set(s => ({
+      ...s,
+      tracks: s.tracks.map((t, i) => i !== ti ? t : {
+        ...t,
+        pats: t.pats.map((p, j) => j !== INSP_PAT ? p : {
+          ...p, steps: newSteps, len: Math.max(buf.length, 1)
+        })
+      })
+    }));
+  }, []);
+
+  // PLAY mode: Note On with inspiration recording
+  const playNoteOn = useCallback((ni) => {
+    const out = outRef.current;
+    if (!out) return;
+    const midi = sNRef.current[ni];
+    if (midi == null || midi < 12 || midi > 120) return;
+    const trk = stRef.current.tracks[stRef.current.selTrk];
+    const ch  = (trk.midiCh - 1) & 0x0F;
+    out.send([0x90 | ch, midi, 100]);
+    recordInspiration(ni);
+  }, [recordInspiration]);
+
+  // PLAY mode: Note Off (sustain release)
+  const playNoteOff = useCallback((ni) => {
+    const out = outRef.current;
+    if (!out) return;
+    const midi = sNRef.current[ni];
+    if (midi == null || midi < 12 || midi > 120) return;
+    const trk = stRef.current.tracks[stRef.current.selTrk];
+    const ch  = (trk.midiCh - 1) & 0x0F;
+    out.send([0x80 | ch, midi, 0]);
   }, []);
 
   // Mutators
@@ -890,6 +1195,7 @@ function App() {
   return (
     <div className="app">
       <Header st={st} set={set} onPlay={startPlay} onStop={stopPlay}
+        onModeChange={onModeChange}
         midiOuts={midiOuts} selOut={selOut} setSel={setSelOut} midiOk={midiOk}/>
       <div className="main">
         {st.mode === 'seq' && <>
@@ -903,6 +1209,16 @@ function App() {
             onPreview={previewNote}/>
         </>}
         {st.mode === 'song' && <SongView st={st} set={set} curSlot={curSlot}/>}
+        {st.mode === 'play' && <>
+          <TrkPanel tracks={st.tracks} sel={st.selTrk} onSel={selTrk} onMute={togMute} onCh={setCh}/>
+          <PlayView
+            selTrk={st.selTrk}
+            root={st.root}
+            scale={st.scale}
+            onNoteOn={playNoteOn}
+            onNoteOff={playNoteOff}
+            inspCount={inspCount}/>
+        </>}
       </div>
     </div>
   );
